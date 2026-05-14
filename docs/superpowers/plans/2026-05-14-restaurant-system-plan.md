@@ -188,6 +188,11 @@ frontend/
             <version>3.5.3</version>
         </dependency>
         <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
@@ -669,6 +674,7 @@ package com.tongguo.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @TableName("orders")
@@ -691,6 +697,8 @@ public class Orders {
     private LocalDateTime createTime;
     @TableField("update_time")
     private LocalDateTime updateTime;
+    @TableField(exist = false)
+    private List<OrderItem> items;
 }
 ```
 
@@ -1342,8 +1350,11 @@ public class DishController {
     // ========== 用户端 ==========
 
     @GetMapping("/api/c/dish/list")
-    public Result<List<Dish>> customerList() {
-        return Result.ok(dishService.listPublished());
+    public Result<Map<String, Object>> customerList() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("categories", categoryService.list());
+        data.put("dishes", dishService.listPublished());
+        return Result.ok(data);
     }
 }
 ```
@@ -1609,7 +1620,7 @@ public class CustomerService {
         PointsRecord record = new PointsRecord();
         record.setCustomerId(customerId);
         record.setPoints(points);
-        record.setType(points > 0 ? 1 : 2);
+        record.setType(points > 0 ? 1 : 2); // 1=手动增加, 2=扣减（含手动扣减和兑换扣减）
         record.setRemark(remark);
         pointsRecordMapper.insert(record);
     }
@@ -2060,8 +2071,9 @@ public class SessionController {
             Object paidObj = params.get("actualPaid");
             int actualPaidFen = 0;
             if (paidObj != null) {
-                BigDecimal bd = new BigDecimal(paidObj.toString());
-                actualPaidFen = bd.multiply(new BigDecimal(100)).intValue();
+                BigDecimal bd = new BigDecimal(paidObj.toString())
+                        .setScale(2, BigDecimal.ROUND_HALF_UP);
+                actualPaidFen = bd.multiply(new BigDecimal(100)).intValueExact();
             }
             String phone = (String) params.get("phone");
             SessionCheckout checkout = sessionService.checkout(id, actualPaidFen, phone);
@@ -2108,7 +2120,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class OrderService {
@@ -2128,8 +2140,6 @@ public class OrderService {
     @Autowired
     private CustomerService customerService;
 
-    private static final AtomicInteger seq = new AtomicInteger(0);
-
     /**
      * 创建订单（用户端和商户端共用）
      * @param tableId  桌台ID（可为空，散客）
@@ -2145,17 +2155,6 @@ public class OrderService {
                                String phone, String remark) {
         // 1. 确定 session
         DiningSession session;
-        if (sessionId != null) {
-            session = sessionService.getCurrentByTableId(null); // 先按 sessionId 查
-            session = ordersMapper.selectById(sessionId) != null
-                    ? ((com.tongguo.mapper.DiningSessionMapper)
-                    org.springframework.util.ReflectionUtils.getField(
-                        org.springframework.util.ReflectionUtils.findField(DiningSession.class, "id"), null
-                    )) != null ? null : null : null; // 重新设计
-            // 简化逻辑：
-        }
-
-        // 直接用简洁方式
         if (sessionId != null) {
             // 商户加菜到已有 session
             session = new DiningSession();
@@ -2218,8 +2217,8 @@ public class OrderService {
 
     private String generateOrderNo() {
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        int s = seq.incrementAndGet() % 10000;
-        return date + String.format("%04d", s);
+        int random = ThreadLocalRandom.current().nextInt(1000, 10000);
+        return date + random;
     }
 
     /** 商户端订单列表 */
@@ -2231,16 +2230,23 @@ public class OrderService {
         return ordersMapper.selectList(wrapper);
     }
 
-    /** 获取桌台当前 session 的进行中订单（用户端） */
+    /** 获取桌台当前 session 的进行中订单（用户端），附带订单项 */
     public List<Orders> getTableCurrentOrders(Integer tableId) {
         DiningSession session = sessionService.getCurrentByTableId(tableId);
         if (session == null) return Collections.emptyList();
-        return ordersMapper.selectList(
+        List<Orders> orders = ordersMapper.selectList(
                 new LambdaQueryWrapper<Orders>()
                         .eq(Orders::getSessionId, session.getId())
                         .notIn(Orders::getStatus, 4, 5)
                         .orderByDesc(Orders::getCreateTime)
         );
+        for (Orders order : orders) {
+            order.setItems(orderItemMapper.selectList(
+                    new LambdaQueryWrapper<OrderItem>()
+                            .eq(OrderItem::getOrderId, order.getId())
+            ));
+        }
+        return orders;
     }
 
     /** 获取订单项列表 */
@@ -2971,6 +2977,7 @@ export const updateDish = (data) => mReq.put('/api/m/dish/update', data)
 export const toggleDish = (id) => mReq.put(`/api/m/dish/toggle/${id}`)
 export const updateStock = (data) => mReq.put('/api/m/dish/stock', data)
 export const customerList = () => cReq.get('/api/c/dish/list')
+export const customerCategoryList = () => cReq.get('/api/c/dish/list')  // 同一接口，返回含 categories
 ```
 
 **api/category.js：**
@@ -4311,19 +4318,6 @@ git commit -m "feat: 用户端登录页（手机号可选）"
     </div>
 
     <!-- 购物车详情弹窗 -->
-    <van-popup v-model:show="showCartDetail" position="bottom" style="max-height:50vh">
-      <div style="padding:15px">
-        <h3 style="margin-bottom:10px">购物车</h3>
-        <div v-for="item in cartItems" :key="item.dishId" class="cart-item">
-          <span>{{ item.name }}</span>
-          <span>x{{ item.qty }}</span>
-          <span>&yen;{{ (item.price * item.qty / 100).toFixed(2) }}</span>
-          <el-button size="small" text type="danger" @click="cart[item.dishId] = 0">删除</el-button>
-        </div>
-      </div>
-    </van-popup>
-
-    <!-- 替换为 el-drawer（不依赖 vant） -->
     <el-drawer v-model="showCartDetail" title="购物车" direction="btt" size="50%">
       <div v-for="item in cartItems" :key="item.dishId" style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee">
         <span>{{ item.name }}</span>
@@ -4382,14 +4376,10 @@ const changeQty = (dishId, delta) => {
 
 const loadData = async () => {
   const res = await customerList()
-  dishes.value = res.data
-  // 提取分类
-  const catMap = new Map()
-  dishes.value.forEach(d => {
-    if (!catMap.has(d.categoryId)) catMap.set(d.categoryId, { id: d.categoryId, name: '分类' + d.categoryId })
-  })
-  // 需要从后端获取分类名——简化处理：通过 dish 列表展示
-  categories.value = [{ id: 0, name: '全部' }, ...catMap.values()]
+  dishes.value = res.data.dishes || res.data
+  // 使用后端返回的分类数据
+  const cats = res.data.categories || []
+  categories.value = [{ id: 0, name: '全部' }, ...cats]
 }
 
 const handleSubmit = async () => {
@@ -4474,7 +4464,7 @@ git commit -m "feat: 用户端点餐页（菜单浏览 + 购物车 + 下单）"
         <el-tag size="small">{{ orderStatusText(order.status) }}</el-tag>
       </div>
 
-      <div v-for="item in order._items" :key="item.id" class="item-row">
+      <div v-for="item in order.items" :key="item.id" class="item-row">
         <span class="item-name">{{ item.dishName }}</span>
         <span class="item-qty">x{{ item.quantity }}</span>
         <el-tag size="small" :type="itemStatusType(item.status)">{{ itemStatusText(item.status) }}</el-tag>
