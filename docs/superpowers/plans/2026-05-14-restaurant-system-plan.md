@@ -777,16 +777,6 @@ public interface MerchantUserMapper extends BaseMapper<MerchantUser> {
 
 **其余 9 个 Mapper 同理：** `DishCategoryMapper`、`DishMapper`、`TableInfoMapper`、`DiningSessionMapper`、`SessionCheckoutMapper`、`CustomerMapper`、`OrdersMapper`、`OrderItemMapper`、`PointsRecordMapper`，分别对应各自的 Entity。
 
-> pom.xml 已添加 Lombok 依赖。如果不想用 Lombok，改为手写 getter/setter。注意需在 pom.xml 加 Lombok 依赖。**修正：** pom.xml 的 dependencies 中需加入：
-
-```xml
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <optional>true</optional>
-</dependency>
-```
-
 - [ ] **Step 5: 运行 `mvn compile` 验证编译通过**
 
 Run: `cd backend && mvn compile`
@@ -1303,10 +1293,12 @@ package com.tongguo.controller;
 
 import com.tongguo.config.Result;
 import com.tongguo.entity.Dish;
+import com.tongguo.service.CategoryService;
 import com.tongguo.service.DishService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -1315,6 +1307,9 @@ public class DishController {
 
     @Autowired
     private DishService dishService;
+
+    @Autowired
+    private CategoryService categoryService;
 
     // ========== 商户端 ==========
 
@@ -1780,9 +1775,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class SessionService {
@@ -1881,18 +1875,25 @@ public class SessionService {
                         .ne(Orders::getStatus, 5) // 排除已取消
         );
 
-        // 计算应结总额：仅 status IN (1,2) 的 order_item
-        int totalAmount = 0;
+        // 批量查出该 session 下所有有效订单的 order_item（避免 N+1 查询）
+        List<Integer> orderIds = new ArrayList<>();
         for (Orders order : orders) {
-            if (order.getStatus() == 4) continue; // 已结账跳过
-            List<OrderItem> items = orderItemMapper.selectList(
-                    new LambdaQueryWrapper<OrderItem>()
-                            .eq(OrderItem::getOrderId, order.getId())
-                            .in(OrderItem::getStatus, 1, 2)
-            );
-            for (OrderItem item : items) {
-                totalAmount += item.getDishPrice() * item.getQuantity();
-            }
+            if (order.getStatus() != 4) orderIds.add(order.getId());
+        }
+        List<OrderItem> allItems = orderIds.isEmpty() ? Collections.emptyList() :
+                orderItemMapper.selectList(
+                        new LambdaQueryWrapper<OrderItem>()
+                                .in(OrderItem::getOrderId, orderIds)
+                                .in(OrderItem::getStatus, 1, 2)
+                );
+        // 按 orderId 分组
+        Map<Integer, List<OrderItem>> itemsByOrder = allItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
+
+        // 计算应结总额
+        int totalAmount = 0;
+        for (OrderItem item : allItems) {
+            totalAmount += item.getDishPrice() * item.getQuantity();
         }
 
         Map<String, Object> detail = new HashMap<>();
@@ -1935,17 +1936,19 @@ public class SessionService {
             }
         }
 
-        // 计算应结总额（status IN (1,2) 的 order_item）
+        // 批量查出全部订单的 order_item（避免 N+1 查询）
+        List<Integer> orderIds = new ArrayList<>();
+        for (Orders order : orders) { orderIds.add(order.getId()); }
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>()
+                        .in(OrderItem::getOrderId, orderIds)
+                        .in(OrderItem::getStatus, 1, 2)
+        );
+
+        // 计算应结总额
         int totalAmount = 0;
-        for (Orders order : orders) {
-            List<OrderItem> items = orderItemMapper.selectList(
-                    new LambdaQueryWrapper<OrderItem>()
-                            .eq(OrderItem::getOrderId, order.getId())
-                            .in(OrderItem::getStatus, 1, 2)
-            );
-            for (OrderItem item : items) {
-                totalAmount += item.getDishPrice() * item.getQuantity();
-            }
+        for (OrderItem item : allItems) {
+            totalAmount += item.getDishPrice() * item.getQuantity();
         }
 
         int discountAmount = totalAmount - actualPaidFen;
@@ -1966,38 +1969,27 @@ public class SessionService {
             Customer customer = customerService.findOrCreateByPhone(phone);
             customerId = customer.getId();
             checkout.setCustomerId(customerId);
+        }
 
-            // 写入积分记录
+        // 先插入 checkout 获取自增 ID，再写入积分记录时直接设置 checkoutId
+        checkoutMapper.insert(checkout);
+
+        if (customerId != null) {
+            // 写入积分记录（checkoutId 已可用，直接设置）
             PointsRecord pointsRecord = new PointsRecord();
             pointsRecord.setCustomerId(customerId);
-            pointsRecord.setCheckoutId(null); // 稍后更新
+            pointsRecord.setCheckoutId(checkout.getId());
             pointsRecord.setPoints(pointsEarned);
             pointsRecord.setType(0);
             pointsRecord.setRemark("消费获得");
             pointsRecordMapper.insert(pointsRecord);
 
             // 更新客户积分和累计消费
+            Customer customer = customerMapper.selectById(customerId);
             customer.setPoints(customer.getPoints() + pointsEarned);
             customer.setTotalSpent(customer.getTotalSpent() + actualPaidFen);
             customer.setUpdateTime(LocalDateTime.now());
             customerMapper.updateById(customer);
-        }
-
-        checkoutMapper.insert(checkout);
-
-        // 更新 checkout_id 到 points_record（如果有）
-        if (customerId != null) {
-            PointsRecord pr = pointsRecordMapper.selectOne(
-                    new LambdaQueryWrapper<PointsRecord>()
-                            .eq(PointsRecord::getCustomerId, customerId)
-                            .isNull(PointsRecord::getCheckoutId)
-                            .orderByDesc(PointsRecord::getCreateTime)
-                            .last("LIMIT 1")
-            );
-            if (pr != null) {
-                pr.setCheckoutId(checkout.getId());
-                pointsRecordMapper.updateById(pr);
-            }
         }
 
         // 批量更新订单状态为已结账
@@ -2121,6 +2113,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -2156,9 +2149,11 @@ public class OrderService {
         // 1. 确定 session
         DiningSession session;
         if (sessionId != null) {
-            // 商户加菜到已有 session
-            session = new DiningSession();
-            session.setId(sessionId);
+            // 商户加菜到已有 session，需验证 session 存在且进行中
+            session = sessionMapper.selectById(sessionId);
+            if (session == null || session.getStatus() != 0) {
+                throw new IllegalArgumentException("会话不存在或已结束");
+            }
         } else if (tableId != null) {
             session = sessionService.getOrCreateSession(tableId);
         } else {
@@ -2221,13 +2216,27 @@ public class OrderService {
         return date + random;
     }
 
-    /** 商户端订单列表 */
+    /** 商户端订单列表（附带订单项） */
     public List<Orders> listOrders(Integer status, Integer tableId) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         if (status != null) wrapper.eq(Orders::getStatus, status);
         if (tableId != null) wrapper.eq(Orders::getTableId, tableId);
         wrapper.orderByDesc(Orders::getCreateTime);
-        return ordersMapper.selectList(wrapper);
+        List<Orders> orders = ordersMapper.selectList(wrapper);
+        if (orders.isEmpty()) return orders;
+
+        // 批量加载订单项（避免 N+1 查询）
+        List<Integer> orderIds = new ArrayList<>();
+        for (Orders o : orders) { orderIds.add(o.getId()); }
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds)
+        );
+        Map<Integer, List<OrderItem>> itemsMap = allItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
+        for (Orders order : orders) {
+            order.setItems(itemsMap.getOrDefault(order.getId(), Collections.emptyList()));
+        }
+        return orders;
     }
 
     /** 获取桌台当前 session 的进行中订单（用户端），附带订单项 */
@@ -2240,11 +2249,19 @@ public class OrderService {
                         .notIn(Orders::getStatus, 4, 5)
                         .orderByDesc(Orders::getCreateTime)
         );
+        if (orders.isEmpty()) return orders;
+
+        // 批量查出所有 order_item（避免 N+1 查询）
+        List<Integer> orderIds = new ArrayList<>();
+        for (Orders o : orders) { orderIds.add(o.getId()); }
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>()
+                        .in(OrderItem::getOrderId, orderIds)
+        );
+        Map<Integer, List<OrderItem>> itemsMap = allItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
         for (Orders order : orders) {
-            order.setItems(orderItemMapper.selectList(
-                    new LambdaQueryWrapper<OrderItem>()
-                            .eq(OrderItem::getOrderId, order.getId())
-            ));
+            order.setItems(itemsMap.getOrDefault(order.getId(), Collections.emptyList()));
         }
         return orders;
     }
@@ -3776,11 +3793,7 @@ const itemStatusType = (s) => ['info','','success','warning','danger'][s] || ''
 const loadOrders = async () => {
   const res = await merchantList({ status: filterStatus.value })
   orders.value = res.data
-  // 加载每个订单的 items
-  for (const order of orders.value) {
-    const itemRes = await getItems(order.id)
-    order.items = itemRes.data
-  }
+  // 后端 listOrders 已批量返回 items，无需逐个加载
 }
 
 const handleConfirm = async (id) => {
@@ -3889,7 +3902,7 @@ git commit -m "feat: 商户端订单管理页（确认/上菜/退菜/取消）"
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { list as listTables } from '../../api/table'
-import { detail, checkout } from '../../api/session'
+import { current, detail, checkout } from '../../api/session'
 import { getItems } from '../../api/order'
 
 const busyTables = ref([])
@@ -3910,7 +3923,6 @@ const loadTables = async () => {
 const openSession = async (table) => {
   currentTableId.value = table.id
   // 查找该桌当前 session
-  const { current } = await import('../../api/session').then(m => m)
   const sessRes = await current(table.id)
   if (!sessRes.data) {
     ElMessage.warning('该桌无进行中会话')
@@ -3933,7 +3945,7 @@ const openSession = async (table) => {
 const handleCheckout = async () => {
   loading.value = true
   try {
-    const sessRes = await (await import('../../api/session')).current(currentTableId.value)
+    const sessRes = await current(currentTableId.value)
     await checkout(sessRes.data.id, checkoutForm.value)
     ElMessage.success('结账成功')
     showCheckout.value = false
@@ -4040,6 +4052,30 @@ onMounted(async () => {
       </el-table>
     </el-card>
 
+    <!-- 客户详情弹窗 -->
+    <el-dialog v-model="showDetailDialog" title="客户详情" width="500px">
+      <template v-if="detailData">
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="手机号">{{ detailData.customer?.phone }}</el-descriptions-item>
+          <el-descriptions-item label="名称">{{ detailData.customer?.name }}</el-descriptions-item>
+          <el-descriptions-item label="积分">{{ detailData.customer?.points }}</el-descriptions-item>
+          <el-descriptions-item label="累计消费">{{ ((detailData.customer?.totalSpent || 0) / 100).toFixed(2) }} 元</el-descriptions-item>
+        </el-descriptions>
+        <h4 style="margin: 15px 0 10px">积分明细</h4>
+        <el-table :data="detailData.pointsRecords || []" size="small" max-height="300">
+          <el-table-column prop="remark" label="备注" />
+          <el-table-column label="积分变动" width="100">
+            <template #default="{ row }">
+              <span :style="{ color: row.points > 0 ? '#67c23a' : '#f56c6c' }">
+                {{ row.points > 0 ? '+' : '' }}{{ row.points }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="时间" width="160" />
+        </el-table>
+      </template>
+    </el-dialog>
+
     <!-- 积分操作弹窗 -->
     <el-dialog v-model="showPointsDialog" title="手动调整积分" width="400px">
       <p>客户：{{ currentCustomer?.name }}（当前积分：{{ currentCustomer?.points }}）</p>
@@ -4057,11 +4093,13 @@ onMounted(async () => {
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { merchantList, manualPoints } from '../../api/customer'
+import { merchantList, merchantDetail, manualPoints } from '../../api/customer'
 
 const customers = ref([])
 const keyword = ref('')
 const showPointsDialog = ref(false)
+const showDetailDialog = ref(false)
+const detailData = ref(null)
 const currentCustomer = ref(null)
 const pointsForm = ref({ customerId: null, points: 0, remark: '' })
 
@@ -4070,8 +4108,10 @@ const loadCustomers = async () => {
   customers.value = res.data
 }
 
-const openDetail = (row) => {
-  ElMessage.info('详情页可后续扩展')
+const openDetail = async (row) => {
+  const res = await merchantDetail(row.id)
+  detailData.value = res.data
+  showDetailDialog.value = true
 }
 
 const openPoints = (row) => {
@@ -4136,7 +4176,7 @@ onMounted(loadCustomers)
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { list as listTables } from '../../api/table'
-import { customerList } from '../../api/dish'
+import { merchantList as listDishes } from '../../api/dish'
 import { merchantCreate } from '../../api/order'
 
 const tables = ref([])
@@ -4146,9 +4186,10 @@ const loading = ref(false)
 const form = ref({ tableId: null, phone: '', remark: '' })
 
 const loadData = async () => {
-  const [tRes, dRes] = await Promise.all([listTables(), customerList()])
+  const [tRes, dRes] = await Promise.all([listTables(), listDishes()])
   tables.value = tRes.data
-  dishes.value = dRes.data
+  // 商户端 /api/m/dish/list 返回全部菜品数组，过滤仅展示上架菜品
+  dishes.value = (dRes.data || []).filter(d => d.status === 1)
 }
 
 const handleSubmit = async () => {
