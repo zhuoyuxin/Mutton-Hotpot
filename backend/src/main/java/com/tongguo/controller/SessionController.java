@@ -36,6 +36,9 @@ public class SessionController {
     public Result<SessionCheckout> checkout(@PathVariable Integer id,
                                              @RequestBody Map<String, Object> params) {
         try {
+            if (params == null || !params.containsKey("actualPaid")) {
+                return Result.error("实收金额不能为空");
+            }
             Object paidObj = params.get("actualPaid");
             int actualPaidFen = 0;
             if (paidObj != null) {
@@ -46,6 +49,8 @@ public class SessionController {
             String phone = (String) params.get("phone");
             SessionCheckout checkout = sessionService.checkout(id, actualPaidFen, phone);
             return Result.ok(checkout);
+        } catch (NumberFormatException | ArithmeticException e) {
+            return Result.error("实收金额格式不正确");
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }

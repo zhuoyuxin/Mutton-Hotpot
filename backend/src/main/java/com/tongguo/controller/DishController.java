@@ -27,26 +27,45 @@ public class DishController {
 
     @PostMapping("/api/m/dish/add")
     public Result<Void> add(@RequestBody Map<String, Object> params) {
-        dishService.add(params);
-        return Result.ok();
+        try {
+            dishService.add(params);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @PutMapping("/api/m/dish/update")
     public Result<Void> update(@RequestBody Map<String, Object> params) {
-        dishService.update(params);
-        return Result.ok();
+        try {
+            dishService.update(params);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @PutMapping("/api/m/dish/toggle/{id}")
     public Result<Void> toggle(@PathVariable Integer id) {
-        dishService.toggle(id);
-        return Result.ok();
+        try {
+            dishService.toggle(id);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @PutMapping("/api/m/dish/stock")
     public Result<Void> updateStock(@RequestBody Map<String, Object> params) {
-        dishService.updateStock((Integer) params.get("id"), (Integer) params.get("stock"));
-        return Result.ok();
+        try {
+            dishService.updateStock(
+                    toInteger(params == null ? null : params.get("id")),
+                    toInteger(params == null ? null : params.get("stock"))
+            );
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @GetMapping("/api/c/dish/list")
@@ -55,5 +74,12 @@ public class DishController {
         data.put("categories", categoryService.list());
         data.put("dishes", dishService.listPublished());
         return Result.ok(data);
+    }
+
+    private Integer toInteger(Object value) {
+        if (!(value instanceof Number)) {
+            return null;
+        }
+        return ((Number) value).intValue();
     }
 }

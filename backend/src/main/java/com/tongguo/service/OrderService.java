@@ -38,6 +38,8 @@ public class OrderService {
     public Orders createOrder(Integer tableId, Integer sessionId,
                                List<Map<String, Object>> items,
                                String phone, String remark) {
+        validateCreateOrderItems(items);
+
         DiningSession session;
         if (sessionId != null) {
             session = sessionMapper.selectById(sessionId);
@@ -55,10 +57,15 @@ public class OrderService {
         int totalAmount = 0;
         List<OrderItem> orderItems = new ArrayList<>();
         for (Map<String, Object> item : items) {
-            Integer dishId = (Integer) item.get("dishId");
-            Integer quantity = ((Number) item.get("quantity")).intValue();
+            Integer dishId = toRequiredInt(item.get("dishId"), "菜品ID");
+            Integer quantity = toRequiredInt(item.get("quantity"), "菜品数量");
+            if (quantity <= 0) {
+                throw new IllegalArgumentException("菜品数量必须大于0");
+            }
             Dish dish = dishMapper.selectById(dishId);
-            if (dish == null) continue;
+            if (dish == null) {
+                throw new IllegalArgumentException("存在已失效的菜品，请刷新后重试");
+            }
 
             OrderItem oi = new OrderItem();
             oi.setDishId(dishId);
@@ -69,6 +76,10 @@ public class OrderService {
             orderItems.add(oi);
 
             totalAmount += dish.getPrice() * quantity;
+        }
+
+        if (orderItems.isEmpty()) {
+            throw new IllegalArgumentException("订单至少需要一个有效菜品");
         }
 
         Integer customerId = null;
@@ -92,6 +103,7 @@ public class OrderService {
             orderItemMapper.insert(oi);
         }
 
+        order.setItems(orderItems);
         return order;
     }
 
@@ -107,18 +119,7 @@ public class OrderService {
         if (tableId != null) wrapper.eq(Orders::getTableId, tableId);
         wrapper.orderByDesc(Orders::getCreateTime);
         List<Orders> orders = ordersMapper.selectList(wrapper);
-        if (orders.isEmpty()) return orders;
-
-        List<Integer> orderIds = new ArrayList<>();
-        for (Orders o : orders) { orderIds.add(o.getId()); }
-        List<OrderItem> allItems = orderItemMapper.selectList(
-                new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds)
-        );
-        Map<Integer, List<OrderItem>> itemsMap = allItems.stream()
-                .collect(Collectors.groupingBy(OrderItem::getOrderId));
-        for (Orders order : orders) {
-            order.setItems(itemsMap.getOrDefault(order.getId(), Collections.emptyList()));
-        }
+        populateItems(orders);
         return orders;
     }
 
@@ -131,19 +132,7 @@ public class OrderService {
                         .notIn(Orders::getStatus, 4, 5)
                         .orderByDesc(Orders::getCreateTime)
         );
-        if (orders.isEmpty()) return orders;
-
-        List<Integer> orderIds = new ArrayList<>();
-        for (Orders o : orders) { orderIds.add(o.getId()); }
-        List<OrderItem> allItems = orderItemMapper.selectList(
-                new LambdaQueryWrapper<OrderItem>()
-                        .in(OrderItem::getOrderId, orderIds)
-        );
-        Map<Integer, List<OrderItem>> itemsMap = allItems.stream()
-                .collect(Collectors.groupingBy(OrderItem::getOrderId));
-        for (Orders order : orders) {
-            order.setItems(itemsMap.getOrDefault(order.getId(), Collections.emptyList()));
-        }
+        populateItems(orders);
         return orders;
     }
 
@@ -155,11 +144,13 @@ public class OrderService {
     }
 
     public List<Orders> getCustomerOrders(Integer customerId) {
-        return ordersMapper.selectList(
+        List<Orders> orders = ordersMapper.selectList(
                 new LambdaQueryWrapper<Orders>()
                         .eq(Orders::getCustomerId, customerId)
                         .orderByDesc(Orders::getCreateTime)
         );
+        populateItems(orders);
+        return orders;
     }
 
     @Transactional
@@ -184,7 +175,7 @@ public class OrderService {
         }
 
         refreshOrderStatus(orderId);
-        return ordersMapper.selectById(orderId);
+        return populateItems(ordersMapper.selectById(orderId));
     }
 
     public OrderItem serveItem(Integer itemId) {
@@ -241,7 +232,51 @@ public class OrderService {
         }
 
         refreshOrderStatus(orderId);
-        return ordersMapper.selectById(orderId);
+        return populateItems(ordersMapper.selectById(orderId));
+    }
+
+    private void validateCreateOrderItems(List<Map<String, Object>> items) {
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("订单至少需要一个菜品");
+        }
+    }
+
+    private Integer toRequiredInt(Object value, String fieldName) {
+        if (!(value instanceof Number)) {
+            throw new IllegalArgumentException(fieldName + "不能为空");
+        }
+        return ((Number) value).intValue();
+    }
+
+    private Orders populateItems(Orders order) {
+        if (order == null) {
+            return null;
+        }
+        populateItems(Collections.singletonList(order));
+        return order;
+    }
+
+    private void populateItems(List<Orders> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return;
+        }
+
+        List<Integer> orderIds = orders.stream()
+                .map(Orders::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (orderIds.isEmpty()) {
+            return;
+        }
+
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds)
+        );
+        Map<Integer, List<OrderItem>> itemsMap = allItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
+        for (Orders order : orders) {
+            order.setItems(itemsMap.getOrDefault(order.getId(), Collections.emptyList()));
+        }
     }
 
     private void refreshOrderStatus(Integer orderId) {

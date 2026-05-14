@@ -160,6 +160,16 @@ public class SessionService {
             totalAmount += item.getDishPrice() * item.getQuantity();
         }
 
+        if (actualPaidFen == null) {
+            throw new IllegalArgumentException("实收金额不能为空");
+        }
+        if (actualPaidFen < 0) {
+            throw new IllegalArgumentException("实收金额不能小于0");
+        }
+        if (actualPaidFen > totalAmount) {
+            throw new IllegalArgumentException("实收金额不能大于应结金额");
+        }
+
         int discountAmount = totalAmount - actualPaidFen;
         int pointsEarned = actualPaidFen / 100;
 
