@@ -51,6 +51,10 @@ public class OrderService {
         } else {
             session = sessionService.createWalkInSession();
         }
+        Integer resolvedTableId = session.getTableId();
+        if (sessionId != null && tableId != null && !Objects.equals(tableId, resolvedTableId)) {
+            throw new IllegalArgumentException("桌台与会话不匹配");
+        }
 
         String orderNo = generateOrderNo();
 
@@ -91,7 +95,7 @@ public class OrderService {
         Orders order = new Orders();
         order.setOrderNo(orderNo);
         order.setSessionId(session.getId());
-        order.setTableId(tableId);
+        order.setTableId(resolvedTableId);
         order.setCustomerId(customerId);
         order.setTotalAmount(totalAmount);
         order.setStatus(0);
@@ -178,10 +182,12 @@ public class OrderService {
         return populateItems(ordersMapper.selectById(orderId));
     }
 
+    @Transactional
     public OrderItem serveItem(Integer itemId) {
         OrderItem item = orderItemMapper.selectById(itemId);
         if (item == null) throw new IllegalArgumentException("订单项不存在");
         if (item.getStatus() != 1) throw new IllegalArgumentException("只能上待上菜的菜品");
+        ensureOrderMutable(item.getOrderId());
         item.setStatus(2);
         orderItemMapper.updateById(item);
 
@@ -189,10 +195,12 @@ public class OrderService {
         return item;
     }
 
+    @Transactional
     public OrderItem cancelItem(Integer itemId) {
         OrderItem item = orderItemMapper.selectById(itemId);
         if (item == null) throw new IllegalArgumentException("订单项不存在");
 
+        ensureOrderMutable(item.getOrderId());
         if (item.getStatus() == 0) {
             item.setStatus(4);
         } else if (item.getStatus() == 1) {
@@ -216,6 +224,7 @@ public class OrderService {
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId)
         );
 
+        ensureOrderMutable(order);
         boolean hasServed = items.stream().anyMatch(i -> i.getStatus() == 2);
         if (hasServed) throw new IllegalArgumentException("订单中有已上菜菜品，无法整单取消");
 
@@ -279,8 +288,27 @@ public class OrderService {
         }
     }
 
+    private Orders ensureOrderMutable(Integer orderId) {
+        Orders order = ordersMapper.selectById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        ensureOrderMutable(order);
+        return order;
+    }
+
+    private void ensureOrderMutable(Orders order) {
+        if (order.getStatus() != null && order.getStatus() == 4) {
+            throw new IllegalArgumentException("已结账订单不允许继续操作");
+        }
+    }
+
     private void refreshOrderStatus(Integer orderId) {
         Orders order = ordersMapper.selectById(orderId);
+        if (order == null || (order.getStatus() != null && order.getStatus() == 4)) {
+            return;
+        }
+        ensureOrderMutable(order);
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId)
         );

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 @RestController
@@ -39,13 +40,7 @@ public class SessionController {
             if (params == null || !params.containsKey("actualPaid")) {
                 return Result.error("实收金额不能为空");
             }
-            Object paidObj = params.get("actualPaid");
-            int actualPaidFen = 0;
-            if (paidObj != null) {
-                BigDecimal bd = new BigDecimal(paidObj.toString())
-                        .setScale(2, BigDecimal.ROUND_HALF_UP);
-                actualPaidFen = bd.multiply(new BigDecimal(100)).intValueExact();
-            }
+            Integer actualPaidFen = parseActualPaidFen(params.get("actualPaid"));
             String phone = (String) params.get("phone");
             SessionCheckout checkout = sessionService.checkout(id, actualPaidFen, phone);
             return Result.ok(checkout);
@@ -54,5 +49,17 @@ public class SessionController {
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    private Integer parseActualPaidFen(Object paidObj) {
+        if (paidObj == null) {
+            throw new IllegalArgumentException("实收金额不能为空");
+        }
+        String raw = paidObj.toString().trim();
+        if (raw.isEmpty()) {
+            throw new IllegalArgumentException("实收金额不能为空");
+        }
+        BigDecimal bd = new BigDecimal(raw).setScale(2, RoundingMode.HALF_UP);
+        return bd.multiply(new BigDecimal(100)).intValueExact();
     }
 }

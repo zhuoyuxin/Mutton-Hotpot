@@ -36,7 +36,21 @@ public class TableService {
     }
 
     public void update(TableInfo tableInfo) {
-        tableInfoMapper.updateById(tableInfo);
+        if (tableInfo == null || tableInfo.getId() == null) {
+            throw new IllegalArgumentException("桌台ID不能为空");
+        }
+        TableInfo existing = tableInfoMapper.selectById(tableInfo.getId());
+        if (existing == null) {
+            throw new IllegalArgumentException("桌台不存在");
+        }
+        if (tableInfo.getName() != null) {
+            existing.setName(tableInfo.getName());
+        }
+        if (tableInfo.getArea() != null) {
+            existing.setArea(tableInfo.getArea());
+        }
+        existing.setStatus(hasActiveSession(existing.getId()) ? 1 : 0);
+        tableInfoMapper.updateById(existing);
     }
 
     public void delete(Integer id) {
@@ -62,5 +76,13 @@ public class TableService {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", outputStream);
         return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+    }
+
+    private boolean hasActiveSession(Integer tableId) {
+        return diningSessionMapper.selectCount(
+                new LambdaQueryWrapper<DiningSession>()
+                        .eq(DiningSession::getTableId, tableId)
+                        .eq(DiningSession::getStatus, 0)
+        ) > 0;
     }
 }

@@ -88,9 +88,11 @@ public class CustomerController {
         Customer customer = customerService.detail(id);
         if (customer == null) return Result.error("客户不存在");
         List<PointsRecord> records = customerService.getPointsRecords(id);
+        List<Orders> orders = orderService.getCustomerOrders(id);
         Map<String, Object> data = new HashMap<>();
         data.put("customer", customer);
         data.put("pointsRecords", records);
+        data.put("orders", orders);
         return Result.ok(data);
     }
 
@@ -98,13 +100,27 @@ public class CustomerController {
     public Result<Void> manualPoints(@RequestBody Map<String, Object> params) {
         try {
             customerService.manualPoints(
-                    (Integer) params.get("customerId"),
-                    (Integer) params.get("points"),
+                    toInteger(params.get("customerId"), "客户ID"),
+                    toInteger(params.get("points"), "积分"),
                     (String) params.get("remark")
             );
             return Result.ok();
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
+        }
+    }
+
+    private Integer toInteger(Object value, String fieldName) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString().trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(fieldName + "格式不正确");
         }
     }
 }

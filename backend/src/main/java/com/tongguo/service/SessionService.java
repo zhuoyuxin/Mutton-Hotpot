@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tongguo.entity.*;
 import com.tongguo.mapper.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,34 +41,27 @@ public class SessionService {
 
     @Transactional
     public DiningSession getOrCreateSession(Integer tableId) {
-        DiningSession session = sessionMapper.selectOne(
-                new LambdaQueryWrapper<DiningSession>()
-                        .eq(DiningSession::getTableId, tableId)
-                        .eq(DiningSession::getStatus, 0)
-        );
+        DiningSession session = findActiveSessionByTableId(tableId);
         if (session != null) {
+            syncTableStatus(tableId, 1);
             return session;
         }
 
         session = new DiningSession();
         session.setTableId(tableId);
         session.setStatus(0);
-        sessionMapper.insert(session);
-
-        session = sessionMapper.selectOne(
-                new LambdaQueryWrapper<DiningSession>()
-                        .eq(DiningSession::getTableId, tableId)
-                        .eq(DiningSession::getStatus, 0)
-        );
-
-        if (tableId != null) {
-            TableInfo table = tableInfoMapper.selectById(tableId);
-            if (table != null && table.getStatus() == 0) {
-                table.setStatus(1);
-                tableInfoMapper.updateById(table);
+        try {
+            sessionMapper.insert(session);
+        } catch (DataIntegrityViolationException e) {
+            session = findActiveSessionByTableId(tableId);
+            if (session == null) {
+                throw e;
             }
         }
-
+        if (session.getId() == null) {
+            session = findActiveSessionByTableId(tableId);
+        }
+        syncTableStatus(tableId, 1);
         return session;
     }
 
@@ -96,27 +90,34 @@ public class SessionService {
                         .ne(Orders::getStatus, 5)
         );
 
-        List<Integer> orderIds = new ArrayList<>();
-        for (Orders order : orders) {
-            if (order.getStatus() != 4) orderIds.add(order.getId());
-        }
+        List<Integer> orderIds = orders.stream()
+                .map(Orders::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         List<OrderItem> allItems = orderIds.isEmpty() ? Collections.emptyList() :
                 orderItemMapper.selectList(
                         new LambdaQueryWrapper<OrderItem>()
                                 .in(OrderItem::getOrderId, orderIds)
-                                .in(OrderItem::getStatus, 1, 2)
                 );
         Map<Integer, List<OrderItem>> itemsByOrder = allItems.stream()
                 .collect(Collectors.groupingBy(OrderItem::getOrderId));
+        for (Orders order : orders) {
+            order.setItems(itemsByOrder.getOrDefault(order.getId(), Collections.emptyList()));
+        }
+
+        List<OrderItem> payableItems = allItems.stream()
+                .filter(item -> item.getStatus() != null && (item.getStatus() == 1 || item.getStatus() == 2))
+                .collect(Collectors.toList());
 
         int totalAmount = 0;
-        for (OrderItem item : allItems) {
+        for (OrderItem item : payableItems) {
             totalAmount += item.getDishPrice() * item.getQuantity();
         }
 
         Map<String, Object> detail = new HashMap<>();
         detail.put("session", session);
         detail.put("orders", orders);
+        detail.put("dishSummary", buildDishSummary(payableItems));
         detail.put("totalAmount", totalAmount);
         return detail;
     }
@@ -149,11 +150,12 @@ public class SessionService {
 
         List<Integer> orderIds = new ArrayList<>();
         for (Orders order : orders) { orderIds.add(order.getId()); }
-        List<OrderItem> allItems = orderItemMapper.selectList(
-                new LambdaQueryWrapper<OrderItem>()
-                        .in(OrderItem::getOrderId, orderIds)
-                        .in(OrderItem::getStatus, 1, 2)
-        );
+        List<OrderItem> allItems = orderIds.isEmpty() ? Collections.emptyList() :
+                orderItemMapper.selectList(
+                        new LambdaQueryWrapper<OrderItem>()
+                                .in(OrderItem::getOrderId, orderIds)
+                                .in(OrderItem::getStatus, 1, 2)
+                );
 
         int totalAmount = 0;
         for (OrderItem item : allItems) {
@@ -188,7 +190,17 @@ public class SessionService {
             checkout.setCustomerId(customerId);
         }
 
-        checkoutMapper.insert(checkout);
+        try {
+            checkoutMapper.insert(checkout);
+        } catch (DataIntegrityViolationException e) {
+            SessionCheckout duplicated = checkoutMapper.selectOne(
+                    new LambdaQueryWrapper<SessionCheckout>().eq(SessionCheckout::getSessionId, sessionId)
+            );
+            if (duplicated != null) {
+                return duplicated;
+            }
+            throw e;
+        }
 
         if (customerId != null) {
             PointsRecord pointsRecord = new PointsRecord();
@@ -216,14 +228,48 @@ public class SessionService {
         session.setEndTime(LocalDateTime.now());
         sessionMapper.updateById(session);
 
-        if (session.getTableId() != null) {
-            TableInfo table = tableInfoMapper.selectById(session.getTableId());
-            if (table != null) {
-                table.setStatus(0);
-                tableInfoMapper.updateById(table);
-            }
-        }
+        syncTableStatus(session.getTableId(), 0);
 
         return checkout;
+    }
+
+    private DiningSession findActiveSessionByTableId(Integer tableId) {
+        return sessionMapper.selectOne(
+                new LambdaQueryWrapper<DiningSession>()
+                        .eq(DiningSession::getTableId, tableId)
+                        .eq(DiningSession::getStatus, 0)
+        );
+    }
+
+    private void syncTableStatus(Integer tableId, int expectedStatus) {
+        if (tableId == null) {
+            return;
+        }
+        TableInfo table = tableInfoMapper.selectById(tableId);
+        if (table == null || Objects.equals(table.getStatus(), expectedStatus)) {
+            return;
+        }
+        table.setStatus(expectedStatus);
+        tableInfoMapper.updateById(table);
+    }
+
+    private List<Map<String, Object>> buildDishSummary(List<OrderItem> items) {
+        Map<Integer, Map<String, Object>> summaryByDish = new LinkedHashMap<>();
+        for (OrderItem item : items) {
+            Map<String, Object> summary = summaryByDish.computeIfAbsent(item.getDishId(), key -> {
+                Map<String, Object> data = new HashMap<>();
+                data.put("dishId", item.getDishId());
+                data.put("dishName", item.getDishName());
+                data.put("dishPrice", item.getDishPrice());
+                data.put("quantity", 0);
+                data.put("amount", 0);
+                return data;
+            });
+            int quantity = ((Integer) summary.get("quantity")) + item.getQuantity();
+            int amount = ((Integer) summary.get("amount")) + item.getDishPrice() * item.getQuantity();
+            summary.put("quantity", quantity);
+            summary.put("amount", amount);
+        }
+        return new ArrayList<>(summaryByDish.values());
     }
 }

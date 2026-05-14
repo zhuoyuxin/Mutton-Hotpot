@@ -6,6 +6,7 @@ import com.tongguo.entity.PointsRecord;
 import com.tongguo.mapper.CustomerMapper;
 import com.tongguo.mapper.PointsRecordMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,23 +24,37 @@ public class CustomerService {
 
     @Transactional
     public Customer findOrCreateByPhone(String phone) {
+        String normalizedPhone = normalizePhone(phone);
         Customer customer = customerMapper.selectOne(
-                new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, phone)
+                new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, normalizedPhone)
         );
         if (customer == null) {
             customer = new Customer();
-            customer.setPhone(phone);
-            customer.setName(phone);
+            customer.setPhone(normalizedPhone);
+            customer.setName(normalizedPhone);
             customer.setPoints(0);
             customer.setTotalSpent(0);
-            customerMapper.insert(customer);
+            try {
+                customerMapper.insert(customer);
+            } catch (DataIntegrityViolationException e) {
+                customer = customerMapper.selectOne(
+                        new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, normalizedPhone)
+                );
+                if (customer == null) {
+                    throw e;
+                }
+            }
         }
         return customer;
     }
 
     public Customer getByPhone(String phone) {
+        String normalizedPhone = normalizeText(phone);
+        if (normalizedPhone == null) {
+            return null;
+        }
         return customerMapper.selectOne(
-                new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, phone)
+                new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, normalizedPhone)
         );
     }
 
@@ -66,9 +81,16 @@ public class CustomerService {
 
     @Transactional
     public void manualPoints(Integer customerId, Integer points, String remark) {
+        if (customerId == null) throw new IllegalArgumentException("客户ID不能为空");
+        if (points == null) throw new IllegalArgumentException("积分变动不能为空");
+        if (points == 0) throw new IllegalArgumentException("积分变动不能为0");
         Customer customer = customerMapper.selectById(customerId);
         if (customer == null) throw new IllegalArgumentException("客户不存在");
-        customer.setPoints(customer.getPoints() + points);
+        int nextPoints = customer.getPoints() + points;
+        if (nextPoints < 0) {
+            throw new IllegalArgumentException("客户积分不能小于0");
+        }
+        customer.setPoints(nextPoints);
         customer.setUpdateTime(LocalDateTime.now());
         customerMapper.updateById(customer);
 
@@ -76,7 +98,23 @@ public class CustomerService {
         record.setCustomerId(customerId);
         record.setPoints(points);
         record.setType(points > 0 ? 1 : 2);
-        record.setRemark(remark);
+        record.setRemark(normalizeText(remark));
         pointsRecordMapper.insert(record);
+    }
+
+    public String normalizePhone(String phone) {
+        String normalizedPhone = normalizeText(phone);
+        if (normalizedPhone == null) {
+            throw new IllegalArgumentException("手机号不能为空");
+        }
+        return normalizedPhone;
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

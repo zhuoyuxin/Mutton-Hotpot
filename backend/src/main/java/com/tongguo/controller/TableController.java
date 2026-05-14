@@ -30,8 +30,12 @@ public class TableController {
 
     @PutMapping("/update")
     public Result<Void> update(@RequestBody TableInfo tableInfo) {
-        tableService.update(tableInfo);
-        return Result.ok();
+        try {
+            tableService.update(tableInfo);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
