@@ -90,7 +90,9 @@ const openSession = async (table) => {
       return
     }
     const detailRes = await detail(sessRes.data.id)
-    sessionDetail.value = detailRes.data
+    const data = detailRes.data
+    // detail API 返回 { session, orders, dishSummary, totalAmount }，无顶层 id
+    sessionDetail.value = { ...data.session, orders: data.orders, totalAmount: data.totalAmount }
 
     // 清空旧的 items 映射
     Object.keys(orderItemsMap).forEach(k => delete orderItemsMap[k])
@@ -114,7 +116,7 @@ const openSession = async (table) => {
 const handleCheckout = async () => {
   loading.value = true
   try {
-    await checkout(sessionDetail.value.id, { ...checkoutForm.value, actualPaid: Math.round(checkoutForm.value.actualPaid * 100) })
+    await checkout(sessionDetail.value.id, checkoutForm.value)
     ElMessage.success('结账成功')
     showCheckout.value = false
     loadTables()
