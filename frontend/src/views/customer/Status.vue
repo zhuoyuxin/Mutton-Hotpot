@@ -2,7 +2,12 @@
   <div class="customer-page">
     <h2 style="text-align:center; padding:15px 0; background:#fff">上菜状态</h2>
 
-    <div v-if="orders.length === 0" style="text-align:center; padding:40px; color:#999">
+    <div v-if="loadError" style="text-align:center; padding:40px; color:#f56c6c">
+      <p>加载失败，请稍后重试</p>
+      <el-button type="primary" size="small" @click="loadData" style="margin-top:10px">重试</el-button>
+    </div>
+
+    <div v-else-if="orders.length === 0" style="text-align:center; padding:40px; color:#999">
       暂无订单
     </div>
 
@@ -38,6 +43,7 @@ import { tableOrders } from '../../api/order'
 
 const route = useRoute()
 const orders = ref([])
+const loadError = ref(false)
 let timer = null
 
 const orderStatusText = (s) => ['待确认','制作中','部分上菜','全部上菜','已结账','已取消'][s] || ''
@@ -46,18 +52,33 @@ const itemStatusType = (s) => ['info','warning','success','danger','info'][s] ||
 
 const loadData = async () => {
   try {
+    loadError.value = false
     const res = await tableOrders(route.params.tableId)
     orders.value = res.data
-  } catch (e) { /* 忽略 */ }
+  } catch (e) {
+    loadError.value = true
+  }
+}
+
+const handleVisibility = () => {
+  if (document.hidden) {
+    clearInterval(timer)
+    timer = null
+  } else {
+    loadData()
+    timer = setInterval(loadData, 10000)
+  }
 }
 
 onMounted(() => {
   loadData()
   timer = setInterval(loadData, 10000)
+  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  document.removeEventListener('visibilitychange', handleVisibility)
 })
 </script>
 

@@ -3,14 +3,14 @@
     <!-- 用户信息 -->
     <div class="user-card">
       <h3>{{ info.name || '未登录' }}</h3>
-      <p v-if="info.phone">{{ info.phone }}</p>
+      <p v-if="info.phone">{{ maskedPhone }}</p>
       <div class="stats">
         <div class="stat-item">
           <div class="stat-val">{{ info.points || 0 }}</div>
           <div class="stat-label">积分</div>
         </div>
         <div class="stat-item">
-          <div class="stat-val">{{ ((info.totalSpent || 0) / 100).toFixed(2) }}</div>
+          <div class="stat-val">{{ formatPrice(info.totalSpent || 0) }}</div>
           <div class="stat-label">累计消费(元)</div>
         </div>
       </div>
@@ -22,7 +22,7 @@
         <div v-for="order in orders" :key="order.id" class="order-item">
           <div style="display:flex; justify-content:space-between">
             <span>{{ order.orderNo }}</span>
-            <span style="color:#f56c6c">&yen;{{ (order.totalAmount / 100).toFixed(2) }}</span>
+            <span style="color:#f56c6c">&yen;{{ formatPrice(order.totalAmount) }}</span>
           </div>
           <div style="color:#999; font-size:12px; margin-top:4px">{{ order.createTime }}</div>
         </div>
@@ -46,24 +46,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { customerInfo, customerOrders, customerPoints } from '../../api/customer'
+import { formatPrice } from '../../utils/format'
 
 const info = ref({})
 const orders = ref([])
 const pointsRecords = ref([])
 const activeTab = ref('orders')
 
+const maskedPhone = computed(() => info.value.phone ? info.value.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '')
+
 const loadData = async () => {
   try {
-    const [infoRes, ordersRes, pointsRes] = await Promise.all([
+    const [infoRes, ordersRes, pointsRes] = await Promise.allSettled([
       customerInfo(),
       customerOrders(),
       customerPoints()
     ])
-    info.value = infoRes.data || {}
-    orders.value = ordersRes.data || []
-    pointsRecords.value = pointsRes.data || []
+    if (infoRes.status === 'fulfilled') { info.value = infoRes.value.data || {} }
+    if (ordersRes.status === 'fulfilled') { orders.value = ordersRes.value.data || [] }
+    if (pointsRes.status === 'fulfilled') { pointsRecords.value = pointsRes.value.data || [] }
   } catch (e) { /* 未登录等情况 */ }
 }
 

@@ -16,26 +16,28 @@ const CustomerStatus = () => import('../views/customer/Status.vue')
 const CustomerMine = () => import('../views/customer/Mine.vue')
 
 const routes = [
-  { path: '/m/login', component: MerchantLogin },
+  { path: '/m/login', name: 'MerchantLogin', component: MerchantLogin },
   {
     path: '/m',
+    name: 'MerchantLayout',
     component: MerchantLayout,
     meta: { requiresMerchantAuth: true },
     children: [
       { path: '', redirect: '/m/dashboard' },
-      { path: 'dashboard', component: Dashboard },
-      { path: 'dishes', component: Dishes },
-      { path: 'tables', component: Tables },
-      { path: 'orders', component: Orders },
-      { path: 'sessions', component: Sessions },
-      { path: 'customers', component: Customers },
-      { path: 'manual-order', component: ManualOrder },
+      { path: 'dashboard', name: 'MerchantDashboard', component: Dashboard },
+      { path: 'dishes', name: 'MerchantDishes', component: Dishes },
+      { path: 'tables', name: 'MerchantTables', component: Tables },
+      { path: 'orders', name: 'MerchantOrders', component: Orders },
+      { path: 'sessions', name: 'MerchantSessions', component: Sessions },
+      { path: 'customers', name: 'MerchantCustomers', component: Customers },
+      { path: 'manual-order', name: 'MerchantManualOrder', component: ManualOrder },
     ]
   },
-  { path: '/c/login/:tableId', component: CustomerLogin },
-  { path: '/c/order/:tableId', component: CustomerOrder },
-  { path: '/c/status/:tableId', component: CustomerStatus },
-  { path: '/c/mine', component: CustomerMine },
+  { path: '/c/login/:tableId', name: 'CustomerLogin', component: CustomerLogin },
+  { path: '/c/order/:tableId', name: 'CustomerOrder', component: CustomerOrder },
+  { path: '/c/status/:tableId', name: 'CustomerStatus', component: CustomerStatus },
+  { path: '/c/mine', name: 'CustomerMine', component: CustomerMine },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', redirect: '/m/login' },
   { path: '/', redirect: '/m/login' },
 ]
 

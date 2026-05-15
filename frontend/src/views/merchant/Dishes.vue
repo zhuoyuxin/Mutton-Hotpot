@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading="loading">
     <!-- 分类管理 -->
     <el-row :gutter="20" style="margin-bottom:20px">
       <el-col :span="12">
@@ -20,13 +20,14 @@
               </template>
             </el-table-column>
           </el-table>
+          <el-empty v-if="!loading && categories.length === 0" description="暂无分类" />
         </el-card>
       </el-col>
 
       <!-- 新增/编辑分类弹窗 -->
       <el-dialog v-model="showAddCategory" :title="editingCategory ? '编辑分类' : '新增分类'" width="300px">
-        <el-form>
-          <el-form-item label="分类名">
+        <el-form ref="categoryFormRef" :model="categoryForm" :rules="categoryRules">
+          <el-form-item label="分类名" prop="name">
             <el-input v-model="categoryForm.name" />
           </el-form-item>
           <el-form-item label="排序">
@@ -71,6 +72,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-empty v-if="!loading && dishes.length === 0" description="暂无菜品" />
     </el-card>
 
     <!-- 库存修改弹窗 -->
@@ -98,20 +100,30 @@ import { merchantList as listDishes, toggleDish, updateStock } from '../../api/d
 import { list as listCategories, add as addCategory, update as updateCategory, remove as removeCategory } from '../../api/category'
 import DishFormDialog from '../../components/DishFormDialog.vue'
 
+const loading = ref(false)
 const categories = ref([])
 const dishes = ref([])
 const showAddCategory = ref(false)
 const editingCategory = ref(null)
 const categoryForm = ref({ name: '', sortOrder: 0 })
+const categoryFormRef = ref(null)
+const categoryRules = { name: [{ required: true, message: '请输入分类名', trigger: 'blur' }] }
 const showDishForm = ref(false)
 const editingDish = ref(null)
 const showStockDialog = ref(false)
 const stockForm = ref({ id: null, stock: 0 })
 
 const loadData = async () => {
-  const [cRes, dRes] = await Promise.all([listCategories(), listDishes()])
-  categories.value = cRes.data
-  dishes.value = dRes.data
+  loading.value = true
+  try {
+    const [cRes, dRes] = await Promise.all([listCategories(), listDishes()])
+    categories.value = cRes.data
+    dishes.value = dRes.data
+  } catch (e) {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const editCategory = (row) => {
@@ -121,6 +133,8 @@ const editCategory = (row) => {
 }
 
 const handleSaveCategory = async () => {
+  if (!categoryFormRef.value) return
+  await categoryFormRef.value.validate()
   if (editingCategory.value) {
     await updateCategory({ id: editingCategory.value.id, ...categoryForm.value })
   } else {
@@ -148,8 +162,12 @@ const openDishForm = (dish) => {
 }
 
 const handleToggle = async (id) => {
-  await toggleDish(id)
-  loadData()
+  try {
+    await toggleDish(id)
+    loadData()
+  } catch (e) {
+    ElMessage.error('操作失败')
+  }
 }
 
 const handleEditStock = (row) => {
@@ -158,9 +176,13 @@ const handleEditStock = (row) => {
 }
 
 const handleSaveStock = async () => {
-  await updateStock(stockForm.value)
-  showStockDialog.value = false
-  loadData()
+  try {
+    await updateStock(stockForm.value)
+    showStockDialog.value = false
+    loadData()
+  } catch (e) {
+    ElMessage.error('修改库存失败')
+  }
 }
 
 onMounted(loadData)

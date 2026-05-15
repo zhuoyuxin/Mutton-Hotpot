@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading="loading">
     <el-card>
       <template #header>
         <span>会话结账</span>
@@ -14,17 +14,18 @@
           </el-card>
         </el-col>
       </el-row>
+      <el-empty v-if="!loading && busyTables.length === 0" description="暂无使用中的桌台" />
     </el-card>
 
     <!-- 结账弹窗 -->
     <el-dialog v-model="showCheckout" title="整桌结账" width="500px">
-      <div v-if="sessionDetail">
+      <div v-if="sessionDetail" v-loading="detailLoading">
         <p>应结总额：<strong style="color:#f56c6c">{{ (sessionDetail.totalAmount / 100).toFixed(2) }} 元</strong></p>
 
         <el-descriptions title="订单明细" :column="1" border size="small" style="margin-top:10px">
           <template v-for="order in sessionDetail.orders" :key="order.id">
             <el-descriptions-item :label="order.orderNo">
-              <span v-for="item in order._items" :key="item.id" style="margin-right:10px">
+              <span v-for="item in orderItemsMap[order.id]" :key="item.id" style="margin-right:10px">
                 {{ item.dishName }} x{{ item.quantity }}
                 <el-tag size="small" :type="itemStatusType(item.status)">{{ itemStatusText(item.status) }}</el-tag>
               </span>
@@ -50,57 +51,75 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { list as listTables } from '../../api/table'
 import { current, detail, checkout } from '../../api/session'
 import { getItems } from '../../api/order'
+import { itemStatusText, itemStatusType } from '../../utils/orderStatus'
 
+const loading = ref(false)
+const detailLoading = ref(false)
 const busyTables = ref([])
 const showCheckout = ref(false)
 const sessionDetail = ref(null)
+const orderItemsMap = reactive({})
 const checkoutForm = ref({ actualPaid: 0, phone: '' })
-const loading = ref(false)
 const currentTableId = ref(null)
 
-const itemStatusText = (s) => ['待确认','待上菜','已上菜','库存不足','已退菜'][s] || ''
-const itemStatusType = (s) => ['info','','success','warning','danger'][s] || ''
-
 const loadTables = async () => {
-  const res = await listTables()
-  busyTables.value = res.data.filter(t => t.status === 1)
+  loading.value = true
+  try {
+    const res = await listTables()
+    busyTables.value = res.data.filter(t => t.status === 1)
+  } catch (e) {
+    ElMessage.error('加载桌台数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const openSession = async (table) => {
   currentTableId.value = table.id
-  // 查找该桌当前 session
-  const sessRes = await current(table.id)
-  if (!sessRes.data) {
-    ElMessage.warning('该桌无进行中会话')
-    return
-  }
-  const detailRes = await detail(sessRes.data.id)
-  sessionDetail.value = detailRes.data
+  detailLoading.value = true
+  try {
+    // 查找该桌当前 session
+    const sessRes = await current(table.id)
+    if (!sessRes.data) {
+      ElMessage.warning('该桌无进行中会话')
+      return
+    }
+    const detailRes = await detail(sessRes.data.id)
+    sessionDetail.value = detailRes.data
 
-  // 加载每个订单的 items
-  for (const order of sessionDetail.value.orders) {
-    const itemRes = await getItems(order.id)
-    order._items = itemRes.data
-  }
+    // 清空旧的 items 映射
+    Object.keys(orderItemsMap).forEach(k => delete orderItemsMap[k])
 
-  checkoutForm.value.actualPaid = sessionDetail.value.totalAmount / 100
-  checkoutForm.value.phone = ''
-  showCheckout.value = true
+    // 并行加载每个订单的 items
+    await Promise.all(sessionDetail.value.orders.map(async (order) => {
+      const itemRes = await getItems(order.id)
+      orderItemsMap[order.id] = itemRes.data
+    }))
+
+    checkoutForm.value.actualPaid = sessionDetail.value.totalAmount / 100
+    checkoutForm.value.phone = ''
+    showCheckout.value = true
+  } catch (e) {
+    ElMessage.error('加载会话详情失败')
+  } finally {
+    detailLoading.value = false
+  }
 }
 
 const handleCheckout = async () => {
   loading.value = true
   try {
-    const sessRes = await current(currentTableId.value)
-    await checkout(sessRes.data.id, checkoutForm.value)
+    await checkout(sessionDetail.value.id, { ...checkoutForm.value, actualPaid: Math.round(checkoutForm.value.actualPaid * 100) })
     ElMessage.success('结账成功')
     showCheckout.value = false
     loadTables()
+  } catch (e) {
+    ElMessage.error('结账失败')
   } finally {
     loading.value = false
   }

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading="loading">
     <el-row :gutter="20">
       <el-col :span="6">
         <el-card shadow="hover">
@@ -26,12 +26,44 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { getData } from '../../api/dashboard'
 
 const data = ref({})
-onMounted(async () => {
-  const res = await getData()
-  data.value = res.data
+const loading = ref(false)
+const timer = ref(null)
+
+const loadData = async () => {
+  loading.value = true
+  try {
+    const res = await getData()
+    data.value = res.data
+  } catch (e) {
+    ElMessage.error('获取数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleVisibilityChange = () => {
+  if (document.hidden) {
+    clearInterval(timer.value)
+    timer.value = null
+  } else {
+    loadData()
+    timer.value = setInterval(loadData, 30000)
+  }
+}
+
+onMounted(() => {
+  loadData()
+  timer.value = setInterval(loadData, 30000)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  clearInterval(timer.value)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>

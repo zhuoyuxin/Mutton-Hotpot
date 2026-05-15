@@ -25,7 +25,7 @@
           :http-request="handleUpload"
           accept="image/*"
         >
-          <img v-if="form.image" :src="form.image" style="width:100px;height:100px;object-fit:cover" />
+          <img v-if="form.image" :src="form.image" alt="菜品图片" style="width:100px;height:100px;object-fit:cover" />
           <el-button v-else size="small">上传图片</el-button>
         </el-upload>
       </el-form-item>
@@ -73,21 +73,29 @@ const beforeUpload = (file) => {
     ElMessage.error('仅支持 jpg、png、webp 格式')
     return false
   }
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.error('图片不能超过 2MB')
+    return false
+  }
   return true
 }
 
 const handleUpload = async ({ file }) => {
-  const res = await uploadImage(file)
-  form.value.image = res.data
+  try {
+    const res = await uploadImage(file)
+    form.value.image = res.data
+  } catch (e) {
+    ElMessage.error('图片上传失败')
+  }
 }
 
 const handleSubmit = async () => {
   loading.value = true
   try {
     if (isEdit.value) {
-      await updateDish({ ...form.value })
+      await updateDish({ ...form.value, price: Math.round(form.value.price * 100) })
     } else {
-      await addDish({ ...form.value })
+      await addDish({ ...form.value, price: Math.round(form.value.price * 100) })
     }
     ElMessage.success('保存成功')
     emit('saved')

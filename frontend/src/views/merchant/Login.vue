@@ -4,10 +4,10 @@
       <h2 style="text-align:center; margin-bottom:20px">铜锅涮肉管理系统</h2>
       <el-form :model="form" @submit.prevent="handleLogin">
         <el-form-item label="用户名">
-          <el-input v-model="form.username" placeholder="请输入用户名" />
+          <el-input v-model="form.username" placeholder="请输入用户名" autocomplete="username" />
         </el-form-item>
         <el-form-item label="密码">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" />
+          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password autocomplete="current-password" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" style="width:100%" native-type="submit" :loading="loading">
@@ -23,7 +23,10 @@
             <el-input v-model="pwdForm.oldPassword" type="password" />
           </el-form-item>
           <el-form-item label="新密码">
-            <el-input v-model="pwdForm.newPassword" type="password" />
+            <el-input v-model="pwdForm.newPassword" type="password" autocomplete="new-password" />
+          </el-form-item>
+          <el-form-item label="确认密码">
+            <el-input v-model="confirmPwd" type="password" placeholder="请再次输入新密码" autocomplete="new-password" />
           </el-form-item>
         </el-form>
         <template #footer>
@@ -45,6 +48,7 @@ const loading = ref(false)
 const showChangePwd = ref(false)
 const form = ref({ username: '', password: '' })
 const pwdForm = ref({ oldPassword: '', newPassword: '' })
+const confirmPwd = ref('')
 
 const handleLogin = async () => {
   loading.value = true
@@ -57,16 +61,23 @@ const handleLogin = async () => {
     } else {
       router.push('/m/dashboard')
     }
+  } catch {
+    form.value.password = ''
   } finally {
     loading.value = false
   }
 }
 
 const handleChangePwd = async () => {
+  if (pwdForm.value.newPassword !== confirmPwd.value) {
+    ElMessage.error('两次输入的密码不一致')
+    return
+  }
   loading.value = true
   try {
     await changePassword(pwdForm.value)
     ElMessage.success('密码修改成功')
+    confirmPwd.value = ''
     showChangePwd.value = false
     router.push('/m/dashboard')
   } finally {

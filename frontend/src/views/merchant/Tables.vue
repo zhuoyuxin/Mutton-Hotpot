@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading="loading">
     <el-card>
       <template #header>
         <div style="display:flex; justify-content:space-between">
@@ -25,12 +25,13 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-empty v-if="!loading && tables.length === 0" description="暂无桌台" />
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="showForm" :title="editing ? '编辑桌台' : '新增桌台'" width="400px">
-      <el-form :model="form" label-width="60px">
-        <el-form-item label="桌号">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="60px">
+        <el-form-item label="桌号" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
         <el-form-item label="区域">
@@ -50,7 +51,7 @@
     <el-dialog v-model="showQRDialog" title="桌台二维码" width="350px">
       <div style="text-align:center">
         <p>{{ currentTable?.name }}</p>
-        <img v-if="qrImage" :src="qrImage" style="width:250px" />
+        <img v-if="qrImage" :src="qrImage" alt="二维码" style="width:250px" />
       </div>
     </el-dialog>
   </div>
@@ -61,17 +62,27 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { list, add, update, remove, qrcode } from '../../api/table'
 
+const loading = ref(false)
 const tables = ref([])
 const showForm = ref(false)
 const editing = ref(null)
 const form = ref({ name: '', area: '大厅' })
+const formRef = ref(null)
+const formRules = { name: [{ required: true, message: '请输入桌号', trigger: 'blur' }] }
 const showQRDialog = ref(false)
 const qrImage = ref('')
 const currentTable = ref(null)
 
 const loadData = async () => {
-  const res = await list()
-  tables.value = res.data
+  loading.value = true
+  try {
+    const res = await list()
+    tables.value = res.data
+  } catch (e) {
+    ElMessage.error('加载桌台数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const openForm = (row) => {
@@ -81,6 +92,8 @@ const openForm = (row) => {
 }
 
 const handleSave = async () => {
+  if (!formRef.value) return
+  await formRef.value.validate()
   if (editing.value) {
     await update({ id: editing.value.id, ...form.value })
   } else {

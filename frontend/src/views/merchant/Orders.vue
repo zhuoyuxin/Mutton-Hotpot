@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading="loading">
     <el-card>
       <template #header>
         <div style="display:flex; justify-content:space-between; align-items:center">
@@ -17,7 +17,7 @@
       </template>
 
       <el-collapse v-model="expandedOrders">
-        <el-collapse-item v-for="order in orders" :key="order.id" :name="order.id">
+        <el-collapse-item v-for="order in pagedOrders" :key="order.id" :name="order.id">
           <template #title>
             <div style="display:flex; justify-content:space-between; width:100%; padding-right:20px">
               <span>{{ order.orderNo }} - {{ statusText(order.status) }}</span>
@@ -60,39 +60,66 @@
           </el-table>
         </el-collapse-item>
       </el-collapse>
+      <el-empty v-if="!loading && orders.length === 0" description="暂无订单" />
+      <el-pagination
+        v-if="orders.length > 0"
+        style="margin-top:16px; text-align:right"
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="orders.length"
+        layout="prev, pager, next"
+        @current-change="(val) => currentPage = val"
+      />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { merchantList, confirm, serveItem, cancelItem, cancelOrder, getItems } from '../../api/order'
+import { merchantList, confirm, serveItem, cancelItem, cancelOrder } from '../../api/order'
+import { orderStatusText as statusText, itemStatusText, itemStatusType } from '../../utils/orderStatus'
 
+const loading = ref(false)
 const orders = ref([])
 const filterStatus = ref(null)
 const expandedOrders = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
 
-const statusText = (s) => ['待确认','制作中','部分上菜','全部上菜','已结账','已取消'][s] || ''
-const itemStatusText = (s) => ['待确认','待上菜','已上菜','库存不足','已退菜'][s] || ''
-const itemStatusType = (s) => ['info','','success','warning','danger'][s] || ''
+const pagedOrders = computed(() => orders.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value))
 
 const loadOrders = async () => {
-  const res = await merchantList({ status: filterStatus.value })
-  orders.value = res.data
-  // 后端 listOrders 已批量返回 items，无需逐个加载
+  loading.value = true
+  try {
+    const res = await merchantList({ status: filterStatus.value })
+    orders.value = res.data
+    currentPage.value = 1
+  } catch (e) {
+    ElMessage.error('加载订单失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleConfirm = async (id) => {
-  await confirm(id)
-  ElMessage.success('订单已确认')
-  loadOrders()
+  try {
+    await confirm(id)
+    ElMessage.success('订单已确认')
+    loadOrders()
+  } catch (e) {
+    ElMessage.error('确认失败')
+  }
 }
 
 const handleServe = async (itemId) => {
-  await serveItem(itemId)
-  ElMessage.success('已上菜')
-  loadOrders()
+  try {
+    await serveItem(itemId)
+    ElMessage.success('已上菜')
+    loadOrders()
+  } catch (e) {
+    ElMessage.error('上菜操作失败')
+  }
 }
 
 const handleCancelItem = async (itemId) => {

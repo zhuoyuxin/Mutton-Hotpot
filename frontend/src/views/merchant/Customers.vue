@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-loading="loading">
     <el-card>
       <template #header>
         <div style="display:flex; justify-content:space-between">
@@ -28,6 +28,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-empty v-if="!loading && customers.length === 0" description="暂无客户" />
     </el-card>
 
     <!-- 客户详情弹窗 -->
@@ -73,6 +74,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { merchantList, merchantDetail, manualPoints } from '../../api/customer'
 
+const loading = ref(false)
 const customers = ref([])
 const keyword = ref('')
 const showPointsDialog = ref(false)
@@ -82,14 +84,25 @@ const currentCustomer = ref(null)
 const pointsForm = ref({ customerId: null, points: 0, remark: '' })
 
 const loadCustomers = async () => {
-  const res = await merchantList({ keyword: keyword.value })
-  customers.value = res.data
+  loading.value = true
+  try {
+    const res = await merchantList({ keyword: keyword.value })
+    customers.value = res.data
+  } catch (e) {
+    ElMessage.error('加载客户数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const openDetail = async (row) => {
-  const res = await merchantDetail(row.id)
-  detailData.value = res.data
-  showDetailDialog.value = true
+  try {
+    const res = await merchantDetail(row.id)
+    detailData.value = res.data
+    showDetailDialog.value = true
+  } catch (e) {
+    ElMessage.error('加载客户详情失败')
+  }
 }
 
 const openPoints = (row) => {
@@ -99,10 +112,14 @@ const openPoints = (row) => {
 }
 
 const handleSavePoints = async () => {
-  await manualPoints(pointsForm.value)
-  ElMessage.success('积分调整成功')
-  showPointsDialog.value = false
-  loadCustomers()
+  try {
+    await manualPoints(pointsForm.value)
+    ElMessage.success('积分调整成功')
+    showPointsDialog.value = false
+    loadCustomers()
+  } catch (e) {
+    ElMessage.error('积分调整失败')
+  }
 }
 
 onMounted(loadCustomers)

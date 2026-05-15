@@ -22,6 +22,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { customerLogin } from '../../api/customer'
 
 const route = useRoute()
@@ -29,12 +30,20 @@ const router = useRouter()
 const phone = ref('')
 
 const handleLogin = async () => {
-  if (phone.value) {
-    await customerLogin({ phone: phone.value })
-    localStorage.setItem('customerPhone', phone.value)
+  if (phone.value && !/^1[3-9]\d{9}$/.test(phone.value)) {
+    ElMessage.error('请输入正确的手机号')
+    return
   }
-  localStorage.setItem('currentTableId', route.params.tableId)
-  router.push('/c/order/' + route.params.tableId)
+  try {
+    if (phone.value) {
+      await customerLogin({ phone: phone.value })
+      localStorage.setItem('customerPhone', phone.value)
+    }
+    localStorage.setItem('currentTableId', route.params.tableId)
+    router.push('/c/order/' + route.params.tableId)
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '登录失败，请重试')
+  }
 }
 </script>
 

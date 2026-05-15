@@ -35,7 +35,8 @@
       </el-menu>
     </el-aside>
     <el-container>
-      <el-header style="display:flex; justify-content:flex-end; align-items:center; background:#fff; border-bottom:1px solid #eee">
+      <el-header style="display:flex; justify-content:flex-end; align-items:center; gap:12px; background:#fff; border-bottom:1px solid #eee">
+        <span>{{ user.username || user.name }}</span>
         <el-button @click="handleLogout" text>退出登录</el-button>
       </el-header>
       <el-main>
@@ -46,13 +47,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { logout } from '../../api/auth'
 
 const router = useRouter()
+const user = computed(() => JSON.parse(sessionStorage.getItem('merchantUser') || '{}'))
 const handleLogout = async () => {
-  await logout()
-  sessionStorage.removeItem('merchantUser')
-  router.push('/m/login')
+  try {
+    await logout()
+  } finally {
+    sessionStorage.removeItem('merchantUser')
+    router.push('/m/login')
+  }
 }
 </script>
