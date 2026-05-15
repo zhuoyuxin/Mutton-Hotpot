@@ -9,6 +9,9 @@ const Orders = () => import('../views/merchant/Orders.vue')
 const Sessions = () => import('../views/merchant/Sessions.vue')
 const Customers = () => import('../views/merchant/Customers.vue')
 const ManualOrder = () => import('../views/merchant/ManualOrder.vue')
+const History = () => import('../views/merchant/History.vue')
+const TablesView = () => import('../views/merchant/TablesView.vue')
+const Statistics = () => import('../views/merchant/Statistics.vue')
 
 const CustomerLogin = () => import('../views/customer/Login.vue')
 const CustomerOrder = () => import('../views/customer/Order.vue')
@@ -31,6 +34,9 @@ const routes = [
       { path: 'sessions', name: 'MerchantSessions', component: Sessions },
       { path: 'customers', name: 'MerchantCustomers', component: Customers },
       { path: 'manual-order', name: 'MerchantManualOrder', component: ManualOrder },
+      { path: 'history', name: 'MerchantHistory', component: History },
+      { path: 'tables-view', name: 'MerchantTablesView', component: TablesView },
+      { path: 'statistics', name: 'MerchantStatistics', component: Statistics },
     ]
   },
   { path: '/c/login/:tableId', name: 'CustomerLogin', component: CustomerLogin },

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -31,6 +32,12 @@ public class SessionController {
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    @GetMapping("/history")
+    public Result<List<Map<String, Object>>> history(@RequestParam(required = false) String startDate,
+                                                      @RequestParam(required = false) String endDate) {
+        return Result.ok(sessionService.getCheckoutHistory(startDate, endDate));
     }
 
     @PutMapping("/checkout/{id}")

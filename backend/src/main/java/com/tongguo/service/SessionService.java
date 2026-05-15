@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -251,6 +252,65 @@ public class SessionService {
         }
         table.setStatus(expectedStatus);
         tableInfoMapper.updateById(table);
+    }
+
+    public List<Map<String, Object>> getCheckoutHistory(String startDate, String endDate) {
+        LambdaQueryWrapper<SessionCheckout> wrapper = new LambdaQueryWrapper<>();
+        if (startDate != null && !startDate.isEmpty()) {
+            wrapper.ge(SessionCheckout::getCheckoutTime, LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            wrapper.le(SessionCheckout::getCheckoutTime, LocalDate.parse(endDate).atTime(23, 59, 59));
+        }
+        wrapper.orderByDesc(SessionCheckout::getCheckoutTime);
+        List<SessionCheckout> checkouts = checkoutMapper.selectList(wrapper);
+
+        Set<Integer> sessionIds = checkouts.stream()
+                .map(SessionCheckout::getSessionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Integer, DiningSession> sessionMap = new HashMap<>();
+        Map<Integer, TableInfo> tableMap = new HashMap<>();
+        if (!sessionIds.isEmpty()) {
+            List<DiningSession> sessions = sessionMapper.selectList(
+                    new LambdaQueryWrapper<DiningSession>().in(DiningSession::getId, sessionIds)
+            );
+            sessionMap = sessions.stream().collect(Collectors.toMap(DiningSession::getId, s -> s));
+
+            Set<Integer> tableIds = sessions.stream()
+                    .map(DiningSession::getTableId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (!tableIds.isEmpty()) {
+                tableMap = tableInfoMapper.selectList(
+                        new LambdaQueryWrapper<TableInfo>().in(TableInfo::getId, tableIds)
+                ).stream().collect(Collectors.toMap(TableInfo::getId, t -> t));
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SessionCheckout c : checkouts) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", c.getId());
+            row.put("sessionId", c.getSessionId());
+            row.put("totalAmount", c.getTotalAmount());
+            row.put("actualPaid", c.getActualPaid());
+            row.put("discountAmount", c.getDiscountAmount());
+            row.put("pointsEarned", c.getPointsEarned());
+            row.put("checkoutTime", c.getCheckoutTime());
+
+            DiningSession session = sessionMap.get(c.getSessionId());
+            if (session != null && session.getTableId() != null) {
+                TableInfo table = tableMap.get(session.getTableId());
+                if (table != null) {
+                    row.put("tableName", table.getName());
+                    row.put("tableArea", table.getArea());
+                }
+            }
+            result.add(row);
+        }
+        return result;
     }
 
     private List<Map<String, Object>> buildDishSummary(List<OrderItem> items) {

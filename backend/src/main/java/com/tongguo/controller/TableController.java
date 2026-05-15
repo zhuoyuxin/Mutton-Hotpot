@@ -22,6 +22,11 @@ public class TableController {
         return Result.ok(tableService.list());
     }
 
+    @GetMapping("/overview")
+    public Result<List<Map<String, Object>>> overview() {
+        return Result.ok(tableService.getTableOverview());
+    }
+
     @PostMapping("/add")
     public Result<Void> add(@RequestBody TableInfo tableInfo) {
         tableService.add(tableInfo);

@@ -31,6 +31,15 @@
         <el-menu-item index="/m/customers">
           <span>客户管理</span>
         </el-menu-item>
+        <el-menu-item index="/m/tables-view">
+          <span>桌台总览</span>
+        </el-menu-item>
+        <el-menu-item index="/m/history">
+          <span>结账历史</span>
+        </el-menu-item>
+        <el-menu-item index="/m/statistics">
+          <span>营业统计</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -71,6 +80,15 @@
         </el-menu-item>
         <el-menu-item index="/m/customers">
           <span>客户管理</span>
+        </el-menu-item>
+        <el-menu-item index="/m/tables-view">
+          <span>桌台总览</span>
+        </el-menu-item>
+        <el-menu-item index="/m/history">
+          <span>结账历史</span>
+        </el-menu-item>
+        <el-menu-item index="/m/statistics">
+          <span>营业统计</span>
         </el-menu-item>
       </el-menu>
     </el-drawer>

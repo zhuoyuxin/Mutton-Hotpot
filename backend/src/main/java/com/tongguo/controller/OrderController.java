@@ -39,8 +39,11 @@ public class OrderController {
 
     @GetMapping("/api/m/order/list")
     public Result<List<Orders>> list(@RequestParam(required = false) Integer status,
-                                      @RequestParam(required = false) Integer tableId) {
-        return Result.ok(orderService.listOrders(status, tableId));
+                                      @RequestParam(required = false) Integer tableId,
+                                      @RequestParam(required = false) List<Integer> statuses,
+                                      @RequestParam(required = false) String startDate,
+                                      @RequestParam(required = false) String endDate) {
+        return Result.ok(orderService.listOrders(status, tableId, statuses, startDate, endDate));
     }
 
     @PostMapping("/api/m/order/create")

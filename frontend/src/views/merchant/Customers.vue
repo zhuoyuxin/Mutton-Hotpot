@@ -34,7 +34,7 @@
     </el-card>
 
     <!-- 客户详情弹窗 -->
-    <el-dialog v-model="showDetailDialog" title="客户详情" :width="isMobile ? '92vw' : '500px'">
+    <el-dialog v-model="showDetailDialog" title="客户详情" :width="isMobile ? '95vw' : '700px'">
       <template v-if="detailData">
         <el-descriptions :column="isMobile ? 1 : 2" border size="small">
           <el-descriptions-item label="手机号">{{ detailData.customer?.phone }}</el-descriptions-item>
@@ -44,13 +44,31 @@
         </el-descriptions>
         <h4 style="margin: 15px 0 10px">积分明细</h4>
         <div class="table-scroll">
-          <el-table :data="detailData.pointsRecords || []" size="small" max-height="300">
+          <el-table :data="detailData.pointsRecords || []" size="small" max-height="200">
             <el-table-column prop="remark" label="备注" />
             <el-table-column label="积分变动" width="100">
               <template #default="{ row }">
                 <span :style="{ color: row.points > 0 ? '#67c23a' : '#f56c6c' }">
                   {{ row.points > 0 ? '+' : '' }}{{ row.points }}
                 </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="时间" width="160" />
+          </el-table>
+        </div>
+        <h4 style="margin: 15px 0 10px">消费记录</h4>
+        <div class="table-scroll">
+          <el-table :data="detailData.orders || []" size="small" max-height="300">
+            <el-table-column prop="orderNo" label="订单号" width="180" />
+            <el-table-column label="金额(元)" width="100">
+              <template #default="{ row }">{{ formatPrice(row.totalAmount) }}</template>
+            </el-table-column>
+            <el-table-column label="菜品">
+              <template #default="{ row }">{{ orderDishSummary(row) }}</template>
+            </el-table-column>
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }">
+                <el-tag size="small" :type="orderStatusType(row.status)">{{ orderStatusText(row.status) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="createTime" label="时间" width="160" />
@@ -77,6 +95,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { merchantList, merchantDetail, manualPoints } from '../../api/customer'
+import { formatPrice } from '../../utils/format'
+import { orderStatusText, orderStatusType } from '../../utils/orderStatus'
 
 const loading = ref(false)
 const customers = ref([])
@@ -129,6 +149,11 @@ const handleSavePoints = async () => {
   } catch (e) {
     ElMessage.error('积分调整失败')
   }
+}
+
+const orderDishSummary = (order) => {
+  if (!order.items || order.items.length === 0) return '-'
+  return order.items.map(i => i.dishName + 'x' + i.quantity).join('、')
 }
 
 </script>

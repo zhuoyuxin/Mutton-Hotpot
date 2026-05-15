@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -33,6 +34,9 @@ public class OrderService {
 
     @Autowired
     private CustomerService customerService;
+
+    @Autowired
+    private TableInfoMapper tableInfoMapper;
 
     @Transactional
     public Orders createOrder(Integer tableId, Integer sessionId,
@@ -117,13 +121,22 @@ public class OrderService {
         return date + random;
     }
 
-    public List<Orders> listOrders(Integer status, Integer tableId) {
+    public List<Orders> listOrders(Integer status, Integer tableId,
+                                    List<Integer> statuses, String startDate, String endDate) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         if (status != null) wrapper.eq(Orders::getStatus, status);
+        if (statuses != null && !statuses.isEmpty()) wrapper.in(Orders::getStatus, statuses);
         if (tableId != null) wrapper.eq(Orders::getTableId, tableId);
+        if (startDate != null && !startDate.isEmpty()) {
+            wrapper.ge(Orders::getCreateTime, LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            wrapper.le(Orders::getCreateTime, LocalDate.parse(endDate).atTime(23, 59, 59));
+        }
         wrapper.orderByDesc(Orders::getCreateTime);
         List<Orders> orders = ordersMapper.selectList(wrapper);
         populateItems(orders);
+        populateTableInfo(orders);
         return orders;
     }
 
@@ -137,6 +150,7 @@ public class OrderService {
                         .orderByDesc(Orders::getCreateTime)
         );
         populateItems(orders);
+        populateTableInfo(orders);
         return orders;
     }
 
@@ -154,6 +168,7 @@ public class OrderService {
                         .orderByDesc(Orders::getCreateTime)
         );
         populateItems(orders);
+        populateTableInfo(orders);
         return orders;
     }
 
@@ -285,6 +300,29 @@ public class OrderService {
                 .collect(Collectors.groupingBy(OrderItem::getOrderId));
         for (Orders order : orders) {
             order.setItems(itemsMap.getOrDefault(order.getId(), Collections.emptyList()));
+        }
+    }
+
+    private void populateTableInfo(List<Orders> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return;
+        }
+        Set<Integer> tableIds = orders.stream()
+                .map(Orders::getTableId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (tableIds.isEmpty()) {
+            return;
+        }
+        Map<Integer, TableInfo> tableMap = tableInfoMapper.selectList(
+                new LambdaQueryWrapper<TableInfo>().in(TableInfo::getId, tableIds)
+        ).stream().collect(Collectors.toMap(TableInfo::getId, t -> t));
+        for (Orders order : orders) {
+            TableInfo table = tableMap.get(order.getTableId());
+            if (table != null) {
+                order.setTableName(table.getName());
+                order.setTableArea(table.getArea());
+            }
         }
     }
 

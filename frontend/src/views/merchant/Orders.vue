@@ -2,10 +2,13 @@
   <div v-loading="loading">
     <el-card>
       <template #header>
-        <div style="display:flex; justify-content:space-between; align-items:center">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
           <span>订单管理</span>
-          <div>
-            <el-select v-model="filterStatus" placeholder="状态筛选" clearable style="width:120px; margin-right:10px" @change="loadOrders">
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <el-select v-model="filterTableId" placeholder="桌台筛选" clearable style="width:120px" @change="loadOrders">
+              <el-option v-for="t in tableList" :key="t.id" :label="t.name" :value="t.id" />
+            </el-select>
+            <el-select v-model="filterStatus" placeholder="状态筛选" clearable style="width:120px" @change="loadOrders">
               <el-option label="待确认" :value="0" />
               <el-option label="制作中" :value="1" />
               <el-option label="部分上菜" :value="2" />
@@ -20,7 +23,7 @@
         <el-collapse-item v-for="order in pagedOrders" :key="order.id" :name="order.id">
           <template #title>
             <div style="display:flex; justify-content:space-between; width:100%; padding-right:20px">
-              <span>{{ order.orderNo }} - {{ statusText(order.status) }}</span>
+              <span>{{ order.orderNo }} - {{ order.tableName || '散客' }} - {{ statusText(order.status) }}</span>
               <span style="color:#999">{{ order.createTime }}</span>
             </div>
           </template>
@@ -80,11 +83,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { merchantList, confirm, serveItem, cancelItem, cancelOrder } from '../../api/order'
+import { list as listTables } from '../../api/table'
 import { orderStatusText as statusText, itemStatusText, itemStatusType } from '../../utils/orderStatus'
 
 const loading = ref(false)
 const orders = ref([])
+const tableList = ref([])
 const filterStatus = ref(null)
+const filterTableId = ref(null)
 const expandedOrders = ref([])
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -94,7 +100,7 @@ const pagedOrders = computed(() => orders.value.slice((currentPage.value - 1) * 
 const loadOrders = async () => {
   loading.value = true
   try {
-    const res = await merchantList({ status: filterStatus.value })
+    const res = await merchantList({ status: filterStatus.value, tableId: filterTableId.value })
     orders.value = res.data
     currentPage.value = 1
   } catch (e) {
@@ -102,6 +108,13 @@ const loadOrders = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const loadTables = async () => {
+  try {
+    const res = await listTables()
+    tableList.value = res.data
+  } catch (e) { /* ignore */ }
 }
 
 const handleConfirm = async (id) => {
@@ -142,7 +155,10 @@ const handleCancel = async (orderId) => {
   } catch (e) { /* 取消 */ }
 }
 
-onMounted(loadOrders)
+onMounted(() => {
+  loadTables()
+  loadOrders()
+})
 </script>
 
 <style scoped>

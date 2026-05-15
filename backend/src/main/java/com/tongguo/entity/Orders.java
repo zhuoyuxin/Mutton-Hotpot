@@ -28,4 +28,8 @@ public class Orders {
     private LocalDateTime updateTime;
     @TableField(exist = false)
     private List<OrderItem> items;
+    @TableField(exist = false)
+    private String tableName;
+    @TableField(exist = false)
+    private String tableArea;
 }
