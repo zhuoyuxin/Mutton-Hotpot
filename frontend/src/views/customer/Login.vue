@@ -51,7 +51,7 @@ const handleLogin = async () => {
 .customer-page {
   min-height: 100vh;
   background: #f5f5f5;
-  padding: 60px 20px;
+  padding: calc(60px + var(--safe-top, 0px)) 20px 20px;
 }
 .login-box {
   max-width: 400px;

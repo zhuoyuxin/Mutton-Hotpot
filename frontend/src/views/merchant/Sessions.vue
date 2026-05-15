@@ -5,7 +5,7 @@
         <span>会话结账</span>
       </template>
       <el-row :gutter="16">
-        <el-col v-for="table in busyTables" :key="table.id" :span="6" style="margin-bottom:16px">
+        <el-col v-for="table in busyTables" :key="table.id" :xs="12" :sm="8" :md="6" style="margin-bottom:16px">
           <el-card shadow="hover" @click="openSession(table)" style="cursor:pointer">
             <div style="text-align:center">
               <h3>{{ table.name }}</h3>
@@ -18,7 +18,7 @@
     </el-card>
 
     <!-- 结账弹窗 -->
-    <el-dialog v-model="showCheckout" title="整桌结账" width="500px">
+    <el-dialog v-model="showCheckout" title="整桌结账" :width="isMobile ? '92vw' : '500px'">
       <div v-if="sessionDetail" v-loading="detailLoading">
         <p>应结总额：<strong style="color:#f56c6c">{{ (sessionDetail.totalAmount / 100).toFixed(2) }} 元</strong></p>
 
@@ -51,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { list as listTables } from '../../api/table'
 import { current, detail, checkout } from '../../api/session'
@@ -66,6 +66,11 @@ const sessionDetail = ref(null)
 const orderItemsMap = reactive({})
 const checkoutForm = ref({ actualPaid: 0, phone: '' })
 const currentTableId = ref(null)
+const isMobile = ref(window.innerWidth <= 768)
+
+const handleResize = () => { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => { loadTables(); window.addEventListener('resize', handleResize) })
+onUnmounted(() => { window.removeEventListener('resize', handleResize) })
 
 const loadTables = async () => {
   loading.value = true
@@ -127,5 +132,4 @@ const handleCheckout = async () => {
   }
 }
 
-onMounted(loadTables)
 </script>

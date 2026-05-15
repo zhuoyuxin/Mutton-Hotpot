@@ -95,6 +95,7 @@ const handleChangePwd = async () => {
   background: #f5f5f5;
 }
 .login-card {
-  width: 400px;
+  width: 90%;
+  max-width: 400px;
 }
 </style>

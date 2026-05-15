@@ -4,22 +4,22 @@
       <template #header><span>手动下单</span></template>
       <el-form :model="form" label-width="80px">
         <el-form-item label="桌台">
-          <el-select v-model="form.tableId" placeholder="选择桌台（散客留空）" clearable style="width:300px">
+          <el-select v-model="form.tableId" placeholder="选择桌台（散客留空）" clearable :style="isMobile ? 'width:100%' : 'width:300px'">
             <el-option v-for="t in tables" :key="t.id" :label="t.name + ' (' + t.area + ')'" :value="t.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="手机号">
-          <el-input v-model="form.phone" placeholder="客户手机号（可选）" style="width:300px" />
+          <el-input v-model="form.phone" placeholder="客户手机号（可选）" :style="isMobile ? 'width:100%' : 'width:300px'" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="form.remark" style="width:300px" />
+          <el-input v-model="form.remark" :style="isMobile ? 'width:100%' : 'width:300px'" />
         </el-form-item>
       </el-form>
 
       <!-- 菜品选择 -->
       <el-divider>选择菜品</el-divider>
       <el-row :gutter="12">
-        <el-col v-for="dish in dishes" :key="dish.id" :span="6" style="margin-bottom:12px">
+        <el-col v-for="dish in dishes" :key="dish.id" :xs="12" :sm="8" :md="6" style="margin-bottom:12px">
           <el-card shadow="hover" body-style="padding:10px">
             <div>{{ dish.name }}</div>
             <div style="color:#f56c6c; font-size:14px">{{ formatPrice(dish.price) }}元</div>
@@ -34,16 +34,18 @@
       <!-- 订单汇总 -->
       <template v-if="selectedItems.length > 0">
         <el-divider>订单汇总</el-divider>
-        <el-table :data="selectedItems" size="small" style="margin-bottom:16px">
-          <el-table-column prop="name" label="菜品" />
-          <el-table-column label="单价(元)" width="100">
-            <template #default="{ row }">{{ formatPrice(row.price) }}</template>
-          </el-table-column>
-          <el-table-column prop="qty" label="数量" width="80" />
-          <el-table-column label="小计(元)" width="100">
-            <template #default="{ row }">{{ formatPrice(row.price * row.qty) }}</template>
-          </el-table-column>
-        </el-table>
+        <div class="table-scroll">
+          <el-table :data="selectedItems" size="small" style="margin-bottom:16px">
+            <el-table-column prop="name" label="菜品" />
+            <el-table-column label="单价(元)" width="100">
+              <template #default="{ row }">{{ formatPrice(row.price) }}</template>
+            </el-table-column>
+            <el-table-column prop="qty" label="数量" width="80" />
+            <el-table-column label="小计(元)" width="100">
+              <template #default="{ row }">{{ formatPrice(row.price * row.qty) }}</template>
+            </el-table-column>
+          </el-table>
+        </div>
         <div style="text-align:right; font-size:16px; font-weight:bold; margin-bottom:16px">
           合计：<span style="color:#f56c6c">{{ formatPrice(totalPrice) }} 元</span>
         </div>
@@ -56,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { list as listTables } from '../../api/table'
 import { merchantList as listDishes } from '../../api/dish'
@@ -68,6 +70,7 @@ const tables = ref([])
 const dishes = ref([])
 const cart = reactive({})
 const form = ref({ tableId: null, phone: '', remark: '' })
+const isMobile = ref(window.innerWidth <= 768)
 
 const selectedItems = computed(() => dishes.value.filter(d => cart[d.id] > 0).map(d => ({ ...d, qty: cart[d.id] })))
 const totalPrice = computed(() => selectedItems.value.reduce((sum, d) => sum + d.price * d.qty, 0))
@@ -115,5 +118,13 @@ const handleSubmit = async () => {
   }
 }
 
-onMounted(loadData)
+const handleResize = () => { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => { loadData(); window.addEventListener('resize', handleResize) })
+onUnmounted(() => { window.removeEventListener('resize', handleResize) })
 </script>
+
+<style scoped>
+.table-scroll {
+  overflow-x: auto;
+}
+</style>

@@ -155,7 +155,7 @@ watch(cart, (val) => {
 <style scoped>
 .customer-page { min-height: 100vh; background: #f5f5f5; padding-bottom: 70px; }
 .category-tabs {
-  display: flex; overflow-x: auto; background: #fff; padding: 10px;
+  display: flex; overflow-x: auto; background: #fff; padding: calc(10px + var(--safe-top, 0px)) 10px 10px;
   position: sticky; top: 0; z-index: 10; gap: 10px;
 }
 .tab-item { white-space: nowrap; padding: 10px 16px; border-radius: 20px; font-size: 14px; color: #666; cursor: pointer; }
@@ -165,7 +165,7 @@ watch(cart, (val) => {
 .dish-img { width: 100px; height: 100px; object-fit: cover; }
 .dish-info { flex: 1; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
 .dish-name { font-size: 16px; font-weight: 500; }
-.dish-desc { font-size: 12px; color: #999; }
+.dish-desc { font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dish-bottom { display: flex; justify-content: space-between; align-items: center; }
 .dish-price { color: #f56c6c; font-size: 16px; font-weight: 500; }
 .dish-qty { display: flex; align-items: center; gap: 6px; }

@@ -1,6 +1,6 @@
 <template>
   <div class="customer-page">
-    <h2 style="text-align:center; padding:15px 0; background:#fff">上菜状态</h2>
+    <h2 class="status-title">上菜状态</h2>
 
     <div v-if="loadError" style="text-align:center; padding:40px; color:#f56c6c">
       <p>加载失败，请稍后重试</p>
@@ -83,9 +83,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.customer-page { min-height: 100vh; background: #f5f5f5; }
+.customer-page { min-height: 100vh; background: #f5f5f5; padding-bottom: calc(20px + var(--safe-bottom, 0px)); }
+.status-title { text-align: center; padding: 15px 0; background: #fff; position: sticky; top: 0; z-index: 10; }
 .order-card { background: #fff; margin: 10px; border-radius: 8px; padding: 15px; }
 .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 500; }
+.order-header span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f5f5f5; }
 .item-name { flex: 1; }
 .item-qty { width: 40px; text-align: center; color: #666; }

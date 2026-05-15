@@ -36,28 +36,30 @@
           </div>
 
           <!-- 菜品列表 -->
-          <el-table :data="order.items" size="small">
-            <el-table-column prop="dishName" label="菜品" />
-            <el-table-column label="单价(元)" width="80">
-              <template #default="{ row }">{{ (row.dishPrice / 100).toFixed(2) }}</template>
-            </el-table-column>
-            <el-table-column prop="quantity" label="数量" width="60" />
-            <el-table-column label="状态" width="90">
-              <template #default="{ row }">
-                <el-tag size="small" :type="itemStatusType(row.status)">{{ itemStatusText(row.status) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="140">
-              <template #default="{ row }">
-                <el-button v-if="row.status === 1" size="small" text type="success" @click="handleServe(row.id)">
-                  上菜
-                </el-button>
-                <el-button v-if="row.status === 0 || row.status === 1" size="small" text type="danger" @click="handleCancelItem(row.id)">
-                  退菜
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="table-scroll">
+            <el-table :data="order.items" size="small">
+              <el-table-column prop="dishName" label="菜品" />
+              <el-table-column label="单价(元)" width="80">
+                <template #default="{ row }">{{ (row.dishPrice / 100).toFixed(2) }}</template>
+              </el-table-column>
+              <el-table-column prop="quantity" label="数量" width="60" />
+              <el-table-column label="状态" width="90">
+                <template #default="{ row }">
+                  <el-tag size="small" :type="itemStatusType(row.status)">{{ itemStatusText(row.status) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="140">
+                <template #default="{ row }">
+                  <el-button v-if="row.status === 1" size="small" text type="success" @click="handleServe(row.id)">
+                    上菜
+                  </el-button>
+                  <el-button v-if="row.status === 0 || row.status === 1" size="small" text type="danger" @click="handleCancelItem(row.id)">
+                    退菜
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </el-collapse-item>
       </el-collapse>
       <el-empty v-if="!loading && orders.length === 0" description="暂无订单" />
@@ -142,3 +144,9 @@ const handleCancel = async (orderId) => {
 
 onMounted(loadOrders)
 </script>
+
+<style scoped>
+.table-scroll {
+  overflow-x: auto;
+}
+</style>

@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :model-value="visible" :title="isEdit ? '编辑菜品' : '新增菜品'" @close="handleClose" width="500px">
+  <el-dialog :model-value="visible" :title="isEdit ? '编辑菜品' : '新增菜品'" @close="handleClose" :width="isMobile ? '92vw' : '500px'">
     <el-form :model="form" label-width="80px">
       <el-form-item label="分类">
         <el-select v-model="form.categoryId" placeholder="请选择分类" style="width:100%">
@@ -25,7 +25,7 @@
           :http-request="handleUpload"
           accept="image/*"
         >
-          <img v-if="form.image" :src="form.image" alt="菜品图片" style="width:100px;height:100px;object-fit:cover" />
+          <img v-if="form.image" :src="form.image" alt="菜品图片" :style="isMobile ? 'width:60px;height:60px;object-fit:cover' : 'width:100px;height:100px;object-fit:cover'" />
           <el-button v-else size="small">上传图片</el-button>
         </el-upload>
       </el-form-item>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { addDish, updateDish } from '../api/dish'
 import { uploadImage } from '../api/upload'
@@ -56,6 +56,11 @@ const emit = defineEmits(['update:visible', 'saved'])
 const loading = ref(false)
 const isEdit = ref(false)
 const form = ref({})
+const isMobile = ref(window.innerWidth <= 768)
+
+const handleResize = () => { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => { window.addEventListener('resize', handleResize) })
+onUnmounted(() => { window.removeEventListener('resize', handleResize) })
 
 watch(() => props.dish, (val) => {
   if (val) {

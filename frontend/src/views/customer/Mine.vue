@@ -74,10 +74,10 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.customer-page { min-height: 100vh; background: #f5f5f5; }
+.customer-page { min-height: 100vh; background: #f5f5f5; padding-bottom: calc(20px + var(--safe-bottom, 0px)); }
 .user-card {
   background: linear-gradient(135deg, #f56c6c, #e6393d);
-  color: #fff; padding: 30px 20px; text-align: center;
+  color: #fff; padding: calc(30px + var(--safe-top, 0px)) 20px 30px; text-align: center;
 }
 .user-card h3 { margin: 0 0 5px; }
 .user-card p { margin: 0; opacity: 0.8; font-size: 14px; }
@@ -86,4 +86,5 @@ onMounted(loadData)
 .stat-val { font-size: 24px; font-weight: 500; }
 .stat-label { font-size: 12px; opacity: 0.8; margin-top: 4px; }
 .order-item { padding: 12px 15px; border-bottom: 1px solid #f5f5f5; }
+.order-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

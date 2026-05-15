@@ -2,7 +2,7 @@
   <div v-loading="loading">
     <!-- 分类管理 -->
     <el-row :gutter="20" style="margin-bottom:20px">
-      <el-col :span="12">
+      <el-col :xs="24" :md="12">
         <el-card>
           <template #header>
             <div style="display:flex; justify-content:space-between">
@@ -25,7 +25,7 @@
       </el-col>
 
       <!-- 新增/编辑分类弹窗 -->
-      <el-dialog v-model="showAddCategory" :title="editingCategory ? '编辑分类' : '新增分类'" width="300px">
+      <el-dialog v-model="showAddCategory" :title="editingCategory ? '编辑分类' : '新增分类'" :width="isMobile ? '92vw' : '300px'">
         <el-form ref="categoryFormRef" :model="categoryForm" :rules="categoryRules">
           <el-form-item label="分类名" prop="name">
             <el-input v-model="categoryForm.name" />
@@ -49,34 +49,36 @@
           <el-button type="primary" @click="openDishForm(null)">新增菜品</el-button>
         </div>
       </template>
-      <el-table :data="dishes">
-        <el-table-column prop="name" label="名称" />
-        <el-table-column label="价格(元)" width="100">
-          <template #default="{ row }">{{ (row.price / 100).toFixed(2) }}</template>
-        </el-table-column>
-        <el-table-column prop="stock" label="库存" width="80" />
-        <el-table-column label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '上架' : '下架' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200">
-          <template #default="{ row }">
-            <el-button size="small" text @click="openDishForm(row)">编辑</el-button>
-            <el-button size="small" text @click="handleToggle(row.id)">
-              {{ row.status === 1 ? '下架' : '上架' }}
-            </el-button>
-            <el-button size="small" text @click="handleEditStock(row)">库存</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-scroll">
+        <el-table :data="dishes">
+          <el-table-column prop="name" label="名称" />
+          <el-table-column label="价格(元)" width="100">
+            <template #default="{ row }">{{ (row.price / 100).toFixed(2) }}</template>
+          </el-table-column>
+          <el-table-column prop="stock" label="库存" width="80" />
+          <el-table-column label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'info'">
+                {{ row.status === 1 ? '上架' : '下架' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="200">
+            <template #default="{ row }">
+              <el-button size="small" text @click="openDishForm(row)">编辑</el-button>
+              <el-button size="small" text @click="handleToggle(row.id)">
+                {{ row.status === 1 ? '下架' : '上架' }}
+              </el-button>
+              <el-button size="small" text @click="handleEditStock(row)">库存</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
       <el-empty v-if="!loading && dishes.length === 0" description="暂无菜品" />
     </el-card>
 
     <!-- 库存修改弹窗 -->
-    <el-dialog v-model="showStockDialog" title="修改库存" width="300px">
+    <el-dialog v-model="showStockDialog" title="修改库存" :width="isMobile ? '92vw' : '300px'">
       <el-input-number v-model="stockForm.stock" :min="0" style="width:100%" />
       <template #footer>
         <el-button @click="showStockDialog = false">取消</el-button>
@@ -94,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { merchantList as listDishes, toggleDish, updateStock } from '../../api/dish'
 import { list as listCategories, add as addCategory, update as updateCategory, remove as removeCategory } from '../../api/category'
@@ -102,6 +104,7 @@ import DishFormDialog from '../../components/DishFormDialog.vue'
 
 const loading = ref(false)
 const categories = ref([])
+const isMobile = ref(window.innerWidth <= 768)
 const dishes = ref([])
 const showAddCategory = ref(false)
 const editingCategory = ref(null)
@@ -185,5 +188,13 @@ const handleSaveStock = async () => {
   }
 }
 
-onMounted(loadData)
+const handleResize = () => { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => { loadData(); window.addEventListener('resize', handleResize) })
+onUnmounted(() => { window.removeEventListener('resize', handleResize) })
 </script>
+
+<style scoped>
+.table-scroll {
+  overflow-x: auto;
+}
+</style>

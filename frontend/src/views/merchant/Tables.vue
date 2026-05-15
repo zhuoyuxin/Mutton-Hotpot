@@ -7,29 +7,31 @@
           <el-button type="primary" @click="openForm(null)">新增桌台</el-button>
         </div>
       </template>
-      <el-table :data="tables">
-        <el-table-column prop="name" label="桌号" />
-        <el-table-column prop="area" label="区域" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 0 ? 'success' : 'warning'">
-              {{ row.status === 0 ? '空闲' : '使用中' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="250">
-          <template #default="{ row }">
-            <el-button size="small" text @click="openForm(row)">编辑</el-button>
-            <el-button size="small" text @click="showQR(row)">二维码</el-button>
-            <el-button size="small" text type="danger" @click="handleDelete(row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-scroll">
+        <el-table :data="tables">
+          <el-table-column prop="name" label="桌号" />
+          <el-table-column prop="area" label="区域" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 0 ? 'success' : 'warning'">
+                {{ row.status === 0 ? '空闲' : '使用中' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="250">
+            <template #default="{ row }">
+              <el-button size="small" text @click="openForm(row)">编辑</el-button>
+              <el-button size="small" text @click="showQR(row)">二维码</el-button>
+              <el-button size="small" text type="danger" @click="handleDelete(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
       <el-empty v-if="!loading && tables.length === 0" description="暂无桌台" />
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="showForm" :title="editing ? '编辑桌台' : '新增桌台'" width="400px">
+    <el-dialog v-model="showForm" :title="editing ? '编辑桌台' : '新增桌台'" :width="isMobile ? '92vw' : '400px'">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="60px">
         <el-form-item label="桌号" prop="name">
           <el-input v-model="form.name" />
@@ -48,17 +50,17 @@
     </el-dialog>
 
     <!-- 二维码弹窗 -->
-    <el-dialog v-model="showQRDialog" title="桌台二维码" width="350px">
+    <el-dialog v-model="showQRDialog" title="桌台二维码" :width="isMobile ? '92vw' : '350px'">
       <div style="text-align:center">
         <p>{{ currentTable?.name }}</p>
-        <img v-if="qrImage" :src="qrImage" alt="二维码" style="width:250px" />
+        <img v-if="qrImage" :src="qrImage" alt="二维码" :style="isMobile ? 'width:60vw;max-width:250px' : 'width:250px'" />
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { list, add, update, remove, qrcode } from '../../api/table'
 
@@ -72,6 +74,11 @@ const formRules = { name: [{ required: true, message: '请输入桌号', trigger
 const showQRDialog = ref(false)
 const qrImage = ref('')
 const currentTable = ref(null)
+const isMobile = ref(window.innerWidth <= 768)
+
+const handleResize = () => { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => { loadData(); window.addEventListener('resize', handleResize) })
+onUnmounted(() => { window.removeEventListener('resize', handleResize) })
 
 const loadData = async () => {
   loading.value = true
@@ -119,6 +126,10 @@ const showQR = async (row) => {
   qrImage.value = res.data.image
   showQRDialog.value = true
 }
-
-onMounted(loadData)
 </script>
+
+<style scoped>
+.table-scroll {
+  overflow-x: auto;
+}
+</style>
