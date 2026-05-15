@@ -8,8 +8,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
@@ -25,10 +23,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (session == null || session.getAttribute("merchantUser") == null) {
             response.setStatus(401);
             response.setContentType("application/json;charset=UTF-8");
-            Map<String, Object> result = new HashMap<>();
-            result.put("code", 401);
-            result.put("message", "请先登录");
-            response.getWriter().write(objectMapper.writeValueAsString(result));
+            response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "请先登录")));
             return false;
         }
         MerchantUser user = (MerchantUser) session.getAttribute("merchantUser");
@@ -38,10 +33,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 && !isPasswordChangeAllowed(request.getRequestURI())) {
             response.setStatus(403);
             response.setContentType("application/json;charset=UTF-8");
-            Map<String, Object> result = new HashMap<>();
-            result.put("code", 40301);
-            result.put("message", "请先修改初始密码");
-            response.getWriter().write(objectMapper.writeValueAsString(result));
+            response.getWriter().write(objectMapper.writeValueAsString(Result.error(40301, "请先修改初始密码")));
             return false;
         }
         return true;

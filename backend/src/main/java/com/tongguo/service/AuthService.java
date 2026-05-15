@@ -1,6 +1,7 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.dto.AuthInfoDTO;
 import com.tongguo.entity.MerchantUser;
 import com.tongguo.mapper.MerchantUserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,8 +10,6 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 public class AuthService {
@@ -20,7 +19,7 @@ public class AuthService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public Map<String, Object> login(String username, String password, HttpSession session) {
+    public AuthInfoDTO login(String username, String password, HttpSession session) {
         MerchantUser user = merchantUserMapper.selectOne(
                 new LambdaQueryWrapper<MerchantUser>().eq(MerchantUser::getUsername, username)
         );
@@ -33,11 +32,11 @@ public class AuthService {
         sessionUser.setMustChangePassword(user.getMustChangePassword());
         session.setAttribute("merchantUser", sessionUser);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", user.getId());
-        result.put("username", user.getUsername());
-        result.put("mustChangePassword", user.getMustChangePassword());
-        return result;
+        AuthInfoDTO dto = new AuthInfoDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setMustChangePassword(user.getMustChangePassword());
+        return dto;
     }
 
     public void logout(HttpSession session) {
@@ -58,12 +57,12 @@ public class AuthService {
         merchantUserMapper.updateById(user);
     }
 
-    public Map<String, Object> getInfo(HttpSession session) {
+    public AuthInfoDTO getInfo(HttpSession session) {
         MerchantUser user = (MerchantUser) session.getAttribute("merchantUser");
-        Map<String, Object> result = new HashMap<>();
-        result.put("id", user.getId());
-        result.put("username", user.getUsername());
-        result.put("mustChangePassword", user.getMustChangePassword());
-        return result;
+        AuthInfoDTO dto = new AuthInfoDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setMustChangePassword(user.getMustChangePassword());
+        return dto;
     }
 }

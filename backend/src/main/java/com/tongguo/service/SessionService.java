@@ -1,6 +1,7 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.dto.*;
 import com.tongguo.entity.*;
 import com.tongguo.mapper.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,7 +83,7 @@ public class SessionService {
         );
     }
 
-    public Map<String, Object> getDetail(Integer sessionId) {
+    public SessionDetailDTO getDetail(Integer sessionId) {
         DiningSession session = sessionMapper.selectById(sessionId);
         if (session == null) throw new IllegalArgumentException("会话不存在");
 
@@ -116,12 +117,12 @@ public class SessionService {
             totalAmount += item.getDishPrice() * item.getQuantity();
         }
 
-        Map<String, Object> detail = new HashMap<>();
-        detail.put("session", session);
-        detail.put("orders", orders);
-        detail.put("dishSummary", buildDishSummary(payableItems));
-        detail.put("totalAmount", totalAmount);
-        return detail;
+        SessionDetailDTO dto = new SessionDetailDTO();
+        dto.setSession(session);
+        dto.setOrders(orders);
+        dto.setDishSummary(buildDishSummary(payableItems));
+        dto.setTotalAmount(totalAmount);
+        return dto;
     }
 
     @Transactional
@@ -255,7 +256,7 @@ public class SessionService {
         tableInfoMapper.updateById(table);
     }
 
-    public List<Map<String, Object>> getCheckoutHistory(String startDate, String endDate) {
+    public List<CheckoutHistoryDTO> getCheckoutHistory(String startDate, String endDate) {
         LambdaQueryWrapper<SessionCheckout> wrapper = new LambdaQueryWrapper<>();
         if (startDate != null && !startDate.isEmpty()) {
             wrapper.ge(SessionCheckout::getCheckoutTime, parseDateOrThrow(startDate, "开始日期格式不正确").atStartOfDay());
@@ -290,26 +291,26 @@ public class SessionService {
             }
         }
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<CheckoutHistoryDTO> result = new ArrayList<>();
         for (SessionCheckout c : checkouts) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("id", c.getId());
-            row.put("sessionId", c.getSessionId());
-            row.put("totalAmount", c.getTotalAmount());
-            row.put("actualPaid", c.getActualPaid());
-            row.put("discountAmount", c.getDiscountAmount());
-            row.put("pointsEarned", c.getPointsEarned());
-            row.put("checkoutTime", c.getCheckoutTime());
+            CheckoutHistoryDTO dto = new CheckoutHistoryDTO();
+            dto.setId(c.getId());
+            dto.setSessionId(c.getSessionId());
+            dto.setTotalAmount(c.getTotalAmount());
+            dto.setActualPaid(c.getActualPaid());
+            dto.setDiscountAmount(c.getDiscountAmount());
+            dto.setPointsEarned(c.getPointsEarned());
+            dto.setCheckoutTime(c.getCheckoutTime());
 
             DiningSession session = sessionMap.get(c.getSessionId());
             if (session != null && session.getTableId() != null) {
                 TableInfo table = tableMap.get(session.getTableId());
                 if (table != null) {
-                    row.put("tableName", table.getName());
-                    row.put("tableArea", table.getArea());
+                    dto.setTableName(table.getName());
+                    dto.setTableArea(table.getArea());
                 }
             }
-            result.add(row);
+            result.add(dto);
         }
         return result;
     }
@@ -322,22 +323,20 @@ public class SessionService {
         }
     }
 
-    private List<Map<String, Object>> buildDishSummary(List<OrderItem> items) {
-        Map<Integer, Map<String, Object>> summaryByDish = new LinkedHashMap<>();
+    private List<DishSummaryDTO> buildDishSummary(List<OrderItem> items) {
+        Map<Integer, DishSummaryDTO> summaryByDish = new LinkedHashMap<>();
         for (OrderItem item : items) {
-            Map<String, Object> summary = summaryByDish.computeIfAbsent(item.getDishId(), key -> {
-                Map<String, Object> data = new HashMap<>();
-                data.put("dishId", item.getDishId());
-                data.put("dishName", item.getDishName());
-                data.put("dishPrice", item.getDishPrice());
-                data.put("quantity", 0);
-                data.put("amount", 0);
-                return data;
+            DishSummaryDTO summary = summaryByDish.computeIfAbsent(item.getDishId(), key -> {
+                DishSummaryDTO dto = new DishSummaryDTO();
+                dto.setDishId(item.getDishId());
+                dto.setDishName(item.getDishName());
+                dto.setDishPrice(item.getDishPrice());
+                dto.setQuantity(0);
+                dto.setAmount(0);
+                return dto;
             });
-            int quantity = ((Integer) summary.get("quantity")) + item.getQuantity();
-            int amount = ((Integer) summary.get("amount")) + item.getDishPrice() * item.getQuantity();
-            summary.put("quantity", quantity);
-            summary.put("amount", amount);
+            summary.setQuantity(summary.getQuantity() + item.getQuantity());
+            summary.setAmount(summary.getAmount() + item.getDishPrice() * item.getQuantity());
         }
         return new ArrayList<>(summaryByDish.values());
     }

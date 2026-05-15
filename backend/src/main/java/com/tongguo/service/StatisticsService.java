@@ -1,6 +1,7 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.dto.*;
 import com.tongguo.entity.*;
 import com.tongguo.mapper.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +45,7 @@ public class StatisticsService {
                 : LocalDate.now();
     }
 
-    public List<Map<String, Object>> getRevenueTrend(String startDate, String endDate) {
+    public List<RevenueTrendDTO> getRevenueTrend(String startDate, String endDate) {
         LocalDate start = resolveStart(startDate);
         LocalDate end = resolveEnd(endDate);
 
@@ -65,17 +66,17 @@ public class StatisticsService {
             revenueByDate.merge(date, paid, Long::sum);
         }
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<RevenueTrendDTO> result = new ArrayList<>();
         for (Map.Entry<LocalDate, Long> entry : revenueByDate.entrySet()) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("date", entry.getKey().toString());
-            row.put("revenue", entry.getValue());
-            result.add(row);
+            RevenueTrendDTO dto = new RevenueTrendDTO();
+            dto.setDate(entry.getKey().toString());
+            dto.setRevenue(entry.getValue());
+            result.add(dto);
         }
         return result;
     }
 
-    public List<Map<String, Object>> getTopDishes(String startDate, String endDate, Integer limit) {
+    public List<TopDishDTO> getTopDishes(String startDate, String endDate, Integer limit) {
         LocalDate start = resolveStart(startDate);
         LocalDate end = resolveEnd(endDate);
 
@@ -111,21 +112,21 @@ public class StatisticsService {
             acc[1] += price * qty;
         }
 
-        List<Map<String, Object>> dishList = new ArrayList<>();
+        List<TopDishDTO> dishList = new ArrayList<>();
         for (Map.Entry<String, long[]> entry : dishAgg.entrySet()) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("dishName", entry.getKey());
-            row.put("quantity", entry.getValue()[0]);
-            row.put("revenue", entry.getValue()[1]);
-            dishList.add(row);
+            TopDishDTO dto = new TopDishDTO();
+            dto.setDishName(entry.getKey());
+            dto.setQuantity(entry.getValue()[0]);
+            dto.setRevenue(entry.getValue()[1]);
+            dishList.add(dto);
         }
 
-        dishList.sort((a, b) -> Long.compare((long) b.get("revenue"), (long) a.get("revenue")));
+        dishList.sort((a, b) -> Long.compare(b.getRevenue(), a.getRevenue()));
         int effectiveLimit = limit != null ? limit : 10;
         return dishList.stream().limit(effectiveLimit).collect(Collectors.toList());
     }
 
-    public List<Map<String, Object>> getHourlyDistribution(String startDate, String endDate) {
+    public List<HourlyDTO> getHourlyDistribution(String startDate, String endDate) {
         LocalDate start = resolveStart(startDate);
         LocalDate end = resolveEnd(endDate);
 
@@ -146,12 +147,12 @@ public class StatisticsService {
             hourMap.merge(hour, 1, Integer::sum);
         }
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<HourlyDTO> result = new ArrayList<>();
         for (Map.Entry<Integer, Integer> entry : hourMap.entrySet()) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("hour", entry.getKey());
-            row.put("count", entry.getValue());
-            result.add(row);
+            HourlyDTO dto = new HourlyDTO();
+            dto.setHour(entry.getKey());
+            dto.setCount(entry.getValue());
+            result.add(dto);
         }
         return result;
     }

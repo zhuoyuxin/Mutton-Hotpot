@@ -1,6 +1,8 @@
 package com.tongguo.controller;
 
 import com.tongguo.config.Result;
+import com.tongguo.dto.CheckoutHistoryDTO;
+import com.tongguo.dto.SessionDetailDTO;
 import com.tongguo.entity.DiningSession;
 import com.tongguo.entity.SessionCheckout;
 import com.tongguo.service.SessionService;
@@ -26,7 +28,7 @@ public class SessionController {
     }
 
     @GetMapping("/detail/{id}")
-    public Result<Map<String, Object>> detail(@PathVariable Integer id) {
+    public Result<SessionDetailDTO> detail(@PathVariable Integer id) {
         try {
             return Result.ok(sessionService.getDetail(id));
         } catch (IllegalArgumentException e) {
@@ -35,7 +37,7 @@ public class SessionController {
     }
 
     @GetMapping("/history")
-    public Result<List<Map<String, Object>>> history(@RequestParam(required = false) String startDate,
+    public Result<List<CheckoutHistoryDTO>> history(@RequestParam(required = false) String startDate,
                                                       @RequestParam(required = false) String endDate) {
         return Result.ok(sessionService.getCheckoutHistory(startDate, endDate));
     }

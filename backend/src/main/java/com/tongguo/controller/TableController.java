@@ -1,6 +1,7 @@
 package com.tongguo.controller;
 
 import com.tongguo.config.Result;
+import com.tongguo.dto.TableOverviewDTO;
 import com.tongguo.entity.TableInfo;
 import com.tongguo.service.TableService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ public class TableController {
     }
 
     @GetMapping("/overview")
-    public Result<List<Map<String, Object>>> overview() {
+    public Result<List<TableOverviewDTO>> overview() {
         return Result.ok(tableService.getTableOverview());
     }
 

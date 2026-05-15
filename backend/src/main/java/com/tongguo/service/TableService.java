@@ -6,6 +6,7 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.tongguo.dto.TableOverviewDTO;
 import com.tongguo.entity.*;
 import com.tongguo.mapper.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,7 +83,7 @@ public class TableService {
         return Base64.getEncoder().encodeToString(outputStream.toByteArray());
     }
 
-    public List<Map<String, Object>> getTableOverview() {
+    public List<TableOverviewDTO> getTableOverview() {
         List<TableInfo> tables = tableInfoMapper.selectList(null);
         if (tables.isEmpty()) return Collections.emptyList();
 
@@ -121,13 +122,13 @@ public class TableService {
         Map<Integer, List<OrderItem>> itemsByOrderId = allActiveItems.stream()
                 .collect(Collectors.groupingBy(OrderItem::getOrderId));
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<TableOverviewDTO> result = new ArrayList<>();
         for (TableInfo table : tables) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("id", table.getId());
-            row.put("name", table.getName());
-            row.put("area", table.getArea());
-            row.put("status", table.getStatus());
+            TableOverviewDTO dto = new TableOverviewDTO();
+            dto.setId(table.getId());
+            dto.setName(table.getName());
+            dto.setArea(table.getArea());
+            dto.setStatus(table.getStatus());
 
             DiningSession session = sessionByTableId.get(table.getId());
             if (session != null) {
@@ -143,17 +144,17 @@ public class TableService {
                 long served = tableItems.stream().filter(i -> i.getStatus() != null && i.getStatus() == 2).count();
                 long pending = tableItems.stream().filter(i -> i.getStatus() != null && (i.getStatus() == 0 || i.getStatus() == 1)).count();
 
-                row.put("orders", orders);
-                row.put("totalItems", tableItems.size());
-                row.put("servedItems", served);
-                row.put("pendingItems", pending);
+                dto.setOrders(orders);
+                dto.setTotalItems(tableItems.size());
+                dto.setServedItems(served);
+                dto.setPendingItems(pending);
             } else {
-                row.put("orders", Collections.emptyList());
-                row.put("totalItems", 0);
-                row.put("servedItems", 0L);
-                row.put("pendingItems", 0L);
+                dto.setOrders(Collections.emptyList());
+                dto.setTotalItems(0);
+                dto.setServedItems(0L);
+                dto.setPendingItems(0L);
             }
-            result.add(row);
+            result.add(dto);
         }
         return result;
     }

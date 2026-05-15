@@ -1,13 +1,13 @@
 package com.tongguo.controller;
 
 import com.tongguo.config.Result;
+import com.tongguo.dto.DishListDTO;
 import com.tongguo.entity.Dish;
 import com.tongguo.service.CategoryService;
 import com.tongguo.service.DishService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,10 +69,10 @@ public class DishController {
     }
 
     @GetMapping("/api/c/dish/list")
-    public Result<Map<String, Object>> customerList() {
-        Map<String, Object> data = new HashMap<>();
-        data.put("categories", categoryService.list());
-        data.put("dishes", dishService.listPublished());
+    public Result<DishListDTO> customerList() {
+        DishListDTO data = new DishListDTO();
+        data.setCategories(categoryService.list());
+        data.setDishes(dishService.listPublished());
         return Result.ok(data);
     }
 

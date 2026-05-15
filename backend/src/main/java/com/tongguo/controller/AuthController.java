@@ -1,6 +1,7 @@
 package com.tongguo.controller;
 
 import com.tongguo.config.Result;
+import com.tongguo.dto.AuthInfoDTO;
 import com.tongguo.entity.MerchantUser;
 import com.tongguo.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +18,9 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/login")
-    public Result<Map<String, Object>> login(@RequestBody Map<String, String> params, HttpSession session) {
+    public Result<AuthInfoDTO> login(@RequestBody Map<String, String> params, HttpSession session) {
         try {
-            Map<String, Object> data = authService.login(params.get("username"), params.get("password"), session);
+            AuthInfoDTO data = authService.login(params.get("username"), params.get("password"), session);
             return Result.ok(data);
         } catch (IllegalArgumentException e) {
             return Result.error(4001, e.getMessage());
@@ -45,7 +46,7 @@ public class AuthController {
     }
 
     @GetMapping("/info")
-    public Result<Map<String, Object>> info(HttpSession session) {
+    public Result<AuthInfoDTO> info(HttpSession session) {
         return Result.ok(authService.getInfo(session));
     }
 }

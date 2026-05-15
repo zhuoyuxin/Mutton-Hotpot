@@ -1,6 +1,8 @@
 package com.tongguo.controller;
 
 import com.tongguo.config.Result;
+import com.tongguo.dto.CustomerDetailDTO;
+import com.tongguo.dto.CustomerInfoDTO;
 import com.tongguo.entity.Customer;
 import com.tongguo.entity.PointsRecord;
 import com.tongguo.entity.Orders;
@@ -9,7 +11,6 @@ import com.tongguo.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,17 +24,17 @@ public class CustomerController {
     private OrderService orderService;
 
     @PostMapping("/api/c/auth/login")
-    public Result<Map<String, Object>> customerLogin(@RequestBody Map<String, String> params) {
+    public Result<CustomerInfoDTO> customerLogin(@RequestBody Map<String, String> params) {
         String phone = params.get("phone");
         if (phone == null || phone.trim().isEmpty()) {
             return Result.ok();
         }
         Customer customer = customerService.findOrCreateByPhone(phone);
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", customer.getId());
-        data.put("phone", customer.getPhone());
-        data.put("name", customer.getName());
-        return Result.ok(data);
+        CustomerInfoDTO dto = new CustomerInfoDTO();
+        dto.setId(customer.getId());
+        dto.setPhone(customer.getPhone());
+        dto.setName(customer.getName());
+        return Result.ok(dto);
     }
 
     private String extractPhone(String phoneHeader) {
@@ -42,7 +43,7 @@ public class CustomerController {
     }
 
     @GetMapping("/api/c/customer/info")
-    public Result<Map<String, Object>> customerInfo(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
+    public Result<CustomerInfoDTO> customerInfo(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         String phone = extractPhone(phoneHeader);
         if (phone == null) {
             return Result.error(40101, "请先登录");
@@ -51,13 +52,13 @@ public class CustomerController {
         if (customer == null) {
             return Result.error(40101, "请先登录");
         }
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", customer.getId());
-        data.put("phone", customer.getPhone());
-        data.put("name", customer.getName());
-        data.put("points", customer.getPoints());
-        data.put("totalSpent", customer.getTotalSpent());
-        return Result.ok(data);
+        CustomerInfoDTO dto = new CustomerInfoDTO();
+        dto.setId(customer.getId());
+        dto.setPhone(customer.getPhone());
+        dto.setName(customer.getName());
+        dto.setPoints(customer.getPoints());
+        dto.setTotalSpent(customer.getTotalSpent());
+        return Result.ok(dto);
     }
 
     @GetMapping("/api/c/customer/orders")
@@ -84,16 +85,16 @@ public class CustomerController {
     }
 
     @GetMapping("/api/m/customer/detail/{id}")
-    public Result<Map<String, Object>> detail(@PathVariable Integer id) {
+    public Result<CustomerDetailDTO> detail(@PathVariable Integer id) {
         Customer customer = customerService.detail(id);
         if (customer == null) return Result.error("客户不存在");
         List<PointsRecord> records = customerService.getPointsRecords(id);
         List<Orders> orders = orderService.getCustomerOrders(id);
-        Map<String, Object> data = new HashMap<>();
-        data.put("customer", customer);
-        data.put("pointsRecords", records);
-        data.put("orders", orders);
-        return Result.ok(data);
+        CustomerDetailDTO dto = new CustomerDetailDTO();
+        dto.setCustomer(customer);
+        dto.setPointsRecords(records);
+        dto.setOrders(orders);
+        return Result.ok(dto);
     }
 
     @PostMapping("/api/m/customer/points")
