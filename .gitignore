@@ -2,6 +2,8 @@
 backend/target/
 frontend/node_modules/
 frontend/dist/
+*.jar
+*.class
 
 # IDE 配置
 .idea/
@@ -19,6 +21,9 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# 上传文件
+uploads/
 
 # 临时文件
 *.tmp
