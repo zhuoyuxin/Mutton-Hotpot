@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -257,10 +258,10 @@ public class SessionService {
     public List<Map<String, Object>> getCheckoutHistory(String startDate, String endDate) {
         LambdaQueryWrapper<SessionCheckout> wrapper = new LambdaQueryWrapper<>();
         if (startDate != null && !startDate.isEmpty()) {
-            wrapper.ge(SessionCheckout::getCheckoutTime, LocalDate.parse(startDate).atStartOfDay());
+            wrapper.ge(SessionCheckout::getCheckoutTime, parseDateOrThrow(startDate, "开始日期格式不正确").atStartOfDay());
         }
         if (endDate != null && !endDate.isEmpty()) {
-            wrapper.le(SessionCheckout::getCheckoutTime, LocalDate.parse(endDate).atTime(23, 59, 59));
+            wrapper.le(SessionCheckout::getCheckoutTime, parseDateOrThrow(endDate, "结束日期格式不正确").atTime(23, 59, 59));
         }
         wrapper.orderByDesc(SessionCheckout::getCheckoutTime);
         List<SessionCheckout> checkouts = checkoutMapper.selectList(wrapper);
@@ -311,6 +312,14 @@ public class SessionService {
             result.add(row);
         }
         return result;
+    }
+
+    private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(errorMsg);
+        }
     }
 
     private List<Map<String, Object>> buildDishSummary(List<OrderItem> items) {

@@ -84,8 +84,44 @@ public class TableService {
 
     public List<Map<String, Object>> getTableOverview() {
         List<TableInfo> tables = tableInfoMapper.selectList(null);
-        List<Map<String, Object>> result = new ArrayList<>();
+        if (tables.isEmpty()) return Collections.emptyList();
 
+        // 批量查出所有活跃 session
+        List<DiningSession> activeSessions = diningSessionMapper.selectList(
+                new LambdaQueryWrapper<DiningSession>().eq(DiningSession::getStatus, 0)
+        );
+        Map<Integer, DiningSession> sessionByTableId = activeSessions.stream()
+                .filter(s -> s.getTableId() != null)
+                .collect(Collectors.toMap(DiningSession::getTableId, s -> s, (a, b) -> a));
+
+        // 批量查出所有活跃 session 的订单
+        List<Integer> sessionIds = activeSessions.stream().map(DiningSession::getId).collect(Collectors.toList());
+        Map<Integer, List<Orders>> ordersBySessionId = new HashMap<>();
+        List<OrderItem> allActiveItems = Collections.emptyList();
+        if (!sessionIds.isEmpty()) {
+            List<Orders> allOrders = ordersMapper.selectList(
+                    new LambdaQueryWrapper<Orders>()
+                            .in(Orders::getSessionId, sessionIds)
+                            .notIn(Orders::getStatus, 4, 5)
+                            .orderByDesc(Orders::getCreateTime)
+            );
+            ordersBySessionId = allOrders.stream()
+                    .collect(Collectors.groupingBy(Orders::getSessionId));
+
+            // 批量查出所有订单项
+            List<Integer> orderIds = allOrders.stream().map(Orders::getId).collect(Collectors.toList());
+            if (!orderIds.isEmpty()) {
+                allActiveItems = orderItemMapper.selectList(
+                        new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds)
+                );
+            }
+        }
+
+        // 按订单分组订单项
+        Map<Integer, List<OrderItem>> itemsByOrderId = allActiveItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
+
+        List<Map<String, Object>> result = new ArrayList<>();
         for (TableInfo table : tables) {
             Map<String, Object> row = new HashMap<>();
             row.put("id", table.getId());
@@ -93,37 +129,22 @@ public class TableService {
             row.put("area", table.getArea());
             row.put("status", table.getStatus());
 
-            DiningSession activeSession = diningSessionMapper.selectOne(
-                    new LambdaQueryWrapper<DiningSession>()
-                            .eq(DiningSession::getTableId, table.getId())
-                            .eq(DiningSession::getStatus, 0)
-            );
-
-            if (activeSession != null) {
-                List<Orders> orders = ordersMapper.selectList(
-                        new LambdaQueryWrapper<Orders>()
-                                .eq(Orders::getSessionId, activeSession.getId())
-                                .notIn(Orders::getStatus, 4, 5)
-                                .orderByDesc(Orders::getCreateTime)
-                );
-
-                List<Integer> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
-                List<OrderItem> allItems = orderIds.isEmpty() ? Collections.emptyList() :
-                        orderItemMapper.selectList(
-                                new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds)
-                        );
-
-                long served = allItems.stream().filter(i -> i.getStatus() == 2).count();
-                long pending = allItems.stream().filter(i -> i.getStatus() == 0 || i.getStatus() == 1).count();
-
-                Map<Integer, List<OrderItem>> itemsByOrder = allItems.stream()
-                        .collect(Collectors.groupingBy(OrderItem::getOrderId));
+            DiningSession session = sessionByTableId.get(table.getId());
+            if (session != null) {
+                List<Orders> orders = ordersBySessionId.getOrDefault(session.getId(), Collections.emptyList());
                 for (Orders order : orders) {
-                    order.setItems(itemsByOrder.getOrDefault(order.getId(), Collections.emptyList()));
+                    order.setItems(itemsByOrderId.getOrDefault(order.getId(), Collections.emptyList()));
                 }
 
+                List<OrderItem> tableItems = orders.stream()
+                        .flatMap(o -> itemsByOrderId.getOrDefault(o.getId(), Collections.emptyList()).stream())
+                        .collect(Collectors.toList());
+
+                long served = tableItems.stream().filter(i -> i.getStatus() != null && i.getStatus() == 2).count();
+                long pending = tableItems.stream().filter(i -> i.getStatus() != null && (i.getStatus() == 0 || i.getStatus() == 1)).count();
+
                 row.put("orders", orders);
-                row.put("totalItems", allItems.size());
+                row.put("totalItems", tableItems.size());
                 row.put("servedItems", served);
                 row.put("pendingItems", pending);
             } else {

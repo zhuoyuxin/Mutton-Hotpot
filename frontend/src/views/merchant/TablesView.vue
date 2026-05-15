@@ -69,7 +69,7 @@ const latestOrderSummary = (table) => {
 }
 
 const goSessions = (tableId) => {
-  router.push('/m/sessions')
+  router.push({ path: '/m/sessions', query: { tableId } })
 }
 
 const goOrders = (tableId) => {

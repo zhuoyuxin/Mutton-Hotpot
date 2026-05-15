@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -123,15 +124,16 @@ public class OrderService {
 
     public List<Orders> listOrders(Integer status, Integer tableId,
                                     List<Integer> statuses, String startDate, String endDate) {
+        // status 和 statuses 同时传入时，MyBatis Plus 会同时拼接 eq + in，效果等同于取两者交集
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         if (status != null) wrapper.eq(Orders::getStatus, status);
         if (statuses != null && !statuses.isEmpty()) wrapper.in(Orders::getStatus, statuses);
         if (tableId != null) wrapper.eq(Orders::getTableId, tableId);
         if (startDate != null && !startDate.isEmpty()) {
-            wrapper.ge(Orders::getCreateTime, LocalDate.parse(startDate).atStartOfDay());
+            wrapper.ge(Orders::getCreateTime, parseDateOrThrow(startDate, "开始日期格式不正确").atStartOfDay());
         }
         if (endDate != null && !endDate.isEmpty()) {
-            wrapper.le(Orders::getCreateTime, LocalDate.parse(endDate).atTime(23, 59, 59));
+            wrapper.le(Orders::getCreateTime, parseDateOrThrow(endDate, "结束日期格式不正确").atTime(23, 59, 59));
         }
         wrapper.orderByDesc(Orders::getCreateTime);
         List<Orders> orders = ordersMapper.selectList(wrapper);
@@ -270,6 +272,14 @@ public class OrderService {
             throw new IllegalArgumentException(fieldName + "不能为空");
         }
         return ((Number) value).intValue();
+    }
+
+    private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(errorMsg);
+        }
     }
 
     private Orders populateItems(Orders order) {

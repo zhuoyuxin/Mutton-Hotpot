@@ -91,7 +91,7 @@ const loadPendingOrders = async () => {
     const res = await merchantList({ statuses: '0,1,2' })
     pendingOrders.value = res.data
   } catch (e) {
-    /* ignore */
+    ElMessage.error('加载待处理订单失败')
   } finally {
     pendingLoading.value = false
   }
@@ -117,7 +117,7 @@ const handleConfirm = async (id) => {
   try {
     await confirm(id)
     ElMessage.success('订单已确认')
-    loadPendingOrders()
+    refreshAll()
   } catch (e) {
     ElMessage.error('确认失败')
   }
@@ -127,7 +127,7 @@ const handleServe = async (itemId) => {
   try {
     await serveItem(itemId)
     ElMessage.success('已上菜')
-    loadPendingOrders()
+    refreshAll()
   } catch (e) {
     ElMessage.error('上菜操作失败')
   }

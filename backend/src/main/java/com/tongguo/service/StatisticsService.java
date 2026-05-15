@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,9 +24,29 @@ public class StatisticsService {
     @Autowired
     private OrderItemMapper orderItemMapper;
 
+    private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(errorMsg);
+        }
+    }
+
+    private LocalDate resolveStart(String startDate) {
+        return startDate != null && !startDate.isEmpty()
+                ? parseDateOrThrow(startDate, "开始日期格式不正确")
+                : LocalDate.now().minusDays(6);
+    }
+
+    private LocalDate resolveEnd(String endDate) {
+        return endDate != null && !endDate.isEmpty()
+                ? parseDateOrThrow(endDate, "结束日期格式不正确")
+                : LocalDate.now();
+    }
+
     public List<Map<String, Object>> getRevenueTrend(String startDate, String endDate) {
-        LocalDate start = startDate != null && !startDate.isEmpty() ? LocalDate.parse(startDate) : LocalDate.now().minusDays(6);
-        LocalDate end = endDate != null && !endDate.isEmpty() ? LocalDate.parse(endDate) : LocalDate.now();
+        LocalDate start = resolveStart(startDate);
+        LocalDate end = resolveEnd(endDate);
 
         List<SessionCheckout> checkouts = checkoutMapper.selectList(
                 new LambdaQueryWrapper<SessionCheckout>()
@@ -34,17 +54,19 @@ public class StatisticsService {
                         .le(SessionCheckout::getCheckoutTime, end.atTime(LocalTime.MAX))
         );
 
-        Map<LocalDate, Integer> revenueByDate = new LinkedHashMap<>();
+        Map<LocalDate, Long> revenueByDate = new LinkedHashMap<>();
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            revenueByDate.put(d, 0);
+            revenueByDate.put(d, 0L);
         }
         for (SessionCheckout c : checkouts) {
+            if (c.getCheckoutTime() == null) continue;
             LocalDate date = c.getCheckoutTime().toLocalDate();
-            revenueByDate.merge(date, c.getActualPaid(), Integer::sum);
+            long paid = c.getActualPaid() != null ? c.getActualPaid() : 0;
+            revenueByDate.merge(date, paid, Long::sum);
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<LocalDate, Integer> entry : revenueByDate.entrySet()) {
+        for (Map.Entry<LocalDate, Long> entry : revenueByDate.entrySet()) {
             Map<String, Object> row = new HashMap<>();
             row.put("date", entry.getKey().toString());
             row.put("revenue", entry.getValue());
@@ -54,8 +76,8 @@ public class StatisticsService {
     }
 
     public List<Map<String, Object>> getTopDishes(String startDate, String endDate, Integer limit) {
-        LocalDate start = startDate != null && !startDate.isEmpty() ? LocalDate.parse(startDate) : LocalDate.now().minusDays(6);
-        LocalDate end = endDate != null && !endDate.isEmpty() ? LocalDate.parse(endDate) : LocalDate.now();
+        LocalDate start = resolveStart(startDate);
+        LocalDate end = resolveEnd(endDate);
 
         List<SessionCheckout> checkouts = checkoutMapper.selectList(
                 new LambdaQueryWrapper<SessionCheckout>()
@@ -80,28 +102,32 @@ public class StatisticsService {
                         .in(OrderItem::getStatus, 1, 2)
         );
 
-        Map<String, Map<String, Object>> dishMap = new LinkedHashMap<>();
+        Map<String, long[]> dishAgg = new LinkedHashMap<>();
         for (OrderItem item : items) {
-            Map<String, Object> data = dishMap.computeIfAbsent(item.getDishName(), k -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("dishName", k);
-                m.put("quantity", 0);
-                m.put("revenue", 0);
-                return m;
-            });
-            data.put("quantity", (int) data.get("quantity") + item.getQuantity());
-            data.put("revenue", (int) data.get("revenue") + item.getDishPrice() * item.getQuantity());
+            long qty = item.getQuantity() != null ? item.getQuantity() : 0;
+            long price = item.getDishPrice() != null ? item.getDishPrice() : 0;
+            long[] acc = dishAgg.computeIfAbsent(item.getDishName(), k -> new long[]{0, 0});
+            acc[0] += qty;
+            acc[1] += price * qty;
         }
 
-        return dishMap.values().stream()
-                .sorted((a, b) -> (int) b.get("revenue") - (int) a.get("revenue"))
-                .limit(limit != null ? limit : 10)
-                .collect(Collectors.toList());
+        List<Map<String, Object>> dishList = new ArrayList<>();
+        for (Map.Entry<String, long[]> entry : dishAgg.entrySet()) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("dishName", entry.getKey());
+            row.put("quantity", entry.getValue()[0]);
+            row.put("revenue", entry.getValue()[1]);
+            dishList.add(row);
+        }
+
+        dishList.sort((a, b) -> Long.compare((long) b.get("revenue"), (long) a.get("revenue")));
+        int effectiveLimit = limit != null ? limit : 10;
+        return dishList.stream().limit(effectiveLimit).collect(Collectors.toList());
     }
 
     public List<Map<String, Object>> getHourlyDistribution(String startDate, String endDate) {
-        LocalDate start = startDate != null && !startDate.isEmpty() ? LocalDate.parse(startDate) : LocalDate.now().minusDays(6);
-        LocalDate end = endDate != null && !endDate.isEmpty() ? LocalDate.parse(endDate) : LocalDate.now();
+        LocalDate start = resolveStart(startDate);
+        LocalDate end = resolveEnd(endDate);
 
         List<Orders> orders = ordersMapper.selectList(
                 new LambdaQueryWrapper<Orders>()
@@ -115,6 +141,7 @@ public class StatisticsService {
             hourMap.put(h, 0);
         }
         for (Orders order : orders) {
+            if (order.getCreateTime() == null) continue;
             int hour = order.getCreateTime().getHour();
             hourMap.merge(hour, 1, Integer::sum);
         }
