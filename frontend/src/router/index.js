@@ -6,7 +6,6 @@ const Dashboard = () => import('../views/merchant/Dashboard.vue')
 const Dishes = () => import('../views/merchant/Dishes.vue')
 const Tables = () => import('../views/merchant/Tables.vue')
 const Orders = () => import('../views/merchant/Orders.vue')
-const Sessions = () => import('../views/merchant/Sessions.vue')
 const Customers = () => import('../views/merchant/Customers.vue')
 const ManualOrder = () => import('../views/merchant/ManualOrder.vue')
 const History = () => import('../views/merchant/History.vue')
@@ -31,7 +30,7 @@ const routes = [
       { path: 'dishes', name: 'MerchantDishes', component: Dishes },
       { path: 'tables', name: 'MerchantTables', component: Tables },
       { path: 'orders', name: 'MerchantOrders', component: Orders },
-      { path: 'sessions', name: 'MerchantSessions', component: Sessions },
+      { path: 'sessions', redirect: (to) => ({ path: '/m/tables-view', query: to.query }) },
       { path: 'customers', name: 'MerchantCustomers', component: Customers },
       { path: 'manual-order', name: 'MerchantManualOrder', component: ManualOrder },
       { path: 'history', name: 'MerchantHistory', component: History },

@@ -1,6 +1,5 @@
 <template>
   <el-container style="height: 100vh">
-    <!-- Desktop sidebar -->
     <el-aside v-if="!isMobile" width="200px" style="background: #304156">
       <div class="sidebar-title">铜锅涮肉</div>
       <el-menu
@@ -17,22 +16,19 @@
           <span>菜品管理</span>
         </el-menu-item>
         <el-menu-item index="/m/tables">
-          <span>桌台管理</span>
+          <span>桌台配置</span>
+        </el-menu-item>
+        <el-menu-item index="/m/tables-view">
+          <span>桌台运营</span>
         </el-menu-item>
         <el-menu-item index="/m/orders">
           <span>订单管理</span>
-        </el-menu-item>
-        <el-menu-item index="/m/sessions">
-          <span>会话结账</span>
         </el-menu-item>
         <el-menu-item index="/m/manual-order">
           <span>手动下单</span>
         </el-menu-item>
         <el-menu-item index="/m/customers">
           <span>客户管理</span>
-        </el-menu-item>
-        <el-menu-item index="/m/tables-view">
-          <span>桌台总览</span>
         </el-menu-item>
         <el-menu-item index="/m/history">
           <span>结账历史</span>
@@ -43,7 +39,6 @@
       </el-menu>
     </el-aside>
 
-    <!-- Mobile drawer -->
     <el-drawer
       v-model="drawerVisible"
       direction="ltr"
@@ -67,22 +62,19 @@
           <span>菜品管理</span>
         </el-menu-item>
         <el-menu-item index="/m/tables">
-          <span>桌台管理</span>
+          <span>桌台配置</span>
+        </el-menu-item>
+        <el-menu-item index="/m/tables-view">
+          <span>桌台运营</span>
         </el-menu-item>
         <el-menu-item index="/m/orders">
           <span>订单管理</span>
-        </el-menu-item>
-        <el-menu-item index="/m/sessions">
-          <span>会话结账</span>
         </el-menu-item>
         <el-menu-item index="/m/manual-order">
           <span>手动下单</span>
         </el-menu-item>
         <el-menu-item index="/m/customers">
           <span>客户管理</span>
-        </el-menu-item>
-        <el-menu-item index="/m/tables-view">
-          <span>桌台总览</span>
         </el-menu-item>
         <el-menu-item index="/m/history">
           <span>结账历史</span>
@@ -95,7 +87,6 @@
 
     <el-container>
       <el-header class="app-header">
-        <!-- Hamburger button for mobile -->
         <el-button
           v-if="isMobile"
           class="hamburger-btn"
@@ -103,7 +94,6 @@
           text
           @click="drawerVisible = true"
         />
-        <!-- App title shown on mobile since sidebar is hidden -->
         <span v-if="isMobile" class="mobile-title">铜锅涮肉</span>
         <span class="spacer"></span>
         <span class="user-name">{{ user.username || user.name }}</span>
@@ -126,15 +116,16 @@ const router = useRouter()
 const route = useRoute()
 const user = computed(() => JSON.parse(sessionStorage.getItem('merchantUser') || '{}'))
 
-// Mobile detection
 const isMobile = ref(window.innerWidth <= 768)
 const drawerVisible = ref(false)
+
 const handleResize = () => {
   isMobile.value = window.innerWidth <= 768
   if (!isMobile.value) {
     drawerVisible.value = false
   }
 }
+
 onMounted(() => window.addEventListener('resize', handleResize))
 onUnmounted(() => window.removeEventListener('resize', handleResize))
 
@@ -194,13 +185,11 @@ const handleLogout = async () => {
   white-space: nowrap;
 }
 
-/* Mobile drawer styling */
 .mobile-drawer :deep(.el-drawer__body) {
   background-color: #304156;
   padding: 0;
 }
 
-/* Mobile adjustments */
 @media (max-width: 768px) {
   .el-main {
     padding: 10px;
