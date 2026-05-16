@@ -42,10 +42,12 @@
 
     <el-dialog
       v-model="showDetailDialog"
+      class="customer-detail-dialog"
+      :fullscreen="isMobile"
       title="客户详情"
       :width="isMobile ? '95vw' : '840px'"
     >
-      <div v-loading="detailLoading">
+      <div v-loading="detailLoading" class="customer-detail-body">
         <template v-if="detailData">
           <el-descriptions :column="isMobile ? 1 : 2" border size="small">
             <el-descriptions-item label="手机号">{{ detailData.customer?.phone || '-' }}</el-descriptions-item>
@@ -297,6 +299,10 @@ const orderDishSummary = (order) => {
   flex-wrap: wrap;
 }
 
+.customer-detail-body {
+  min-height: 120px;
+}
+
 .detail-section {
   margin-top: 16px;
 }
@@ -342,9 +348,34 @@ const orderDishSummary = (order) => {
 }
 
 @media (max-width: 768px) {
+  .customer-detail-dialog :deep(.el-dialog.is-fullscreen) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .customer-detail-dialog :deep(.el-dialog__body) {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .customer-detail-body {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .customer-detail-body :deep(.el-collapse-item__header) {
+    height: auto;
+    min-height: 48px;
+    align-items: flex-start;
+    padding: 10px 0;
+  }
+
   .record-title {
     align-items: flex-start;
     flex-direction: column;
+    padding-right: 0;
   }
 }
 </style>

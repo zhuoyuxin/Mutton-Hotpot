@@ -27,7 +27,37 @@
       <template #header>
         <span>待处理订单</span>
       </template>
-      <div class="table-scroll">
+
+      <div v-if="isMobile" class="pending-mobile-list" v-loading="pendingLoading">
+        <div v-for="row in pendingOrders" :key="row.id" class="pending-mobile-card">
+          <div class="pending-card-head">
+            <div class="pending-card-title">{{ row.orderNo }}</div>
+            <el-tag size="small" :type="orderStatusType(row.status)">{{ orderStatusText(row.status) }}</el-tag>
+          </div>
+          <div class="pending-card-meta">{{ row.tableName || '散客' }} / {{ row.createTime }}</div>
+          <div class="pending-card-summary">{{ dishSummary(row) }}</div>
+          <div class="pending-card-actions">
+            <el-button
+              v-if="row.status === 0"
+              type="primary"
+              size="small"
+              @click="handleConfirm(row.id)"
+            >
+              确认
+            </el-button>
+            <el-button
+              v-if="hasPendingServeItems(row)"
+              type="success"
+              size="small"
+              @click="openServeDialog(row)"
+            >
+              上菜
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="table-scroll">
         <el-table :data="pendingOrders" size="small" v-loading="pendingLoading">
           <el-table-column prop="orderNo" label="订单号" width="180" />
           <el-table-column label="桌台" width="100">
@@ -70,6 +100,7 @@
           </el-table-column>
         </el-table>
       </div>
+
       <el-empty v-if="!pendingLoading && pendingOrders.length === 0" description="暂无待处理订单" :image-size="60" />
     </el-card>
 
@@ -96,6 +127,7 @@ const pendingOrders = ref([])
 const pendingLoading = ref(false)
 const showServeDialog = ref(false)
 const servingOrder = ref(null)
+const isMobile = ref(window.innerWidth <= 768)
 
 const loadData = async () => {
   loading.value = true
@@ -157,6 +189,10 @@ const openServeDialog = (order) => {
   showServeDialog.value = true
 }
 
+const handleResize = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
 const handleVisibilityChange = () => {
   if (document.hidden) {
     clearInterval(timer.value)
@@ -170,16 +206,62 @@ const handleVisibilityChange = () => {
 onMounted(() => {
   refreshAll()
   timer.value = setInterval(refreshAll, 30000)
+  window.addEventListener('resize', handleResize)
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
   clearInterval(timer.value)
+  window.removeEventListener('resize', handleResize)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 
 <style scoped>
+.pending-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pending-mobile-card {
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.pending-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.pending-card-title {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.pending-card-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.pending-card-summary {
+  margin-top: 10px;
+  color: #303133;
+  line-height: 1.5;
+}
+
+.pending-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
 .table-scroll {
   overflow-x: auto;
 }

@@ -83,11 +83,13 @@
 
     <el-dialog
       v-model="showSessionDialog"
+      class="session-dialog"
+      :fullscreen="isMobile"
       title="会话详情与结账"
       :width="isMobile ? '92vw' : '760px'"
       @closed="resetSessionDialog"
     >
-      <div v-if="sessionDetail" v-loading="detailLoading">
+      <div v-if="sessionDetail" v-loading="detailLoading" class="session-dialog-body">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px">
           <div>
             <div style="font-weight:600">{{ currentTable?.name }}<span v-if="currentTable?.area" style="color:#909399; font-weight:400"> / {{ currentTable.area }}</span></div>
@@ -106,7 +108,7 @@
             :name="order.id"
           >
             <template #title>
-              <div style="display:flex; justify-content:space-between; width:100%; padding-right:20px">
+              <div class="session-order-title">
                 <span>{{ order.orderNo }}</span>
                 <span style="color:#909399">{{ order.createTime }}</span>
               </div>
@@ -131,7 +133,12 @@
 
         <el-divider />
 
-        <el-form :model="checkoutForm" label-width="110px">
+        <el-form
+          :model="checkoutForm"
+          :label-width="isMobile ? 'auto' : '110px'"
+          :label-position="isMobile ? 'top' : 'right'"
+          class="checkout-form"
+        >
           <el-form-item label="实收金额(元)">
             <el-input-number
               v-model="checkoutForm.actualPaid"
@@ -326,7 +333,54 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.session-dialog-body {
+  min-height: 120px;
+}
+
+.session-order-title {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 20px;
+  gap: 12px;
+}
+
 .table-scroll {
   overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .session-dialog :deep(.el-dialog.is-fullscreen) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .session-dialog :deep(.el-dialog__body) {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .session-dialog :deep(.el-dialog__footer) {
+    border-top: 1px solid #ebeef5;
+    background: #fff;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .session-dialog-body {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .session-order-title {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-right: 0;
+  }
+
+  .checkout-form :deep(.el-form-item) {
+    margin-bottom: 14px;
+  }
 }
 </style>

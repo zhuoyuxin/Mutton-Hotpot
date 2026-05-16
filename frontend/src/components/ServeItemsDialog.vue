@@ -1,6 +1,8 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
+    class="serve-dialog"
+    :fullscreen="isMobile"
     title="上菜"
     :width="isMobile ? '92vw' : '640px'"
     @closed="resetState"
@@ -8,6 +10,34 @@
     <div v-if="pendingItems.length === 0">
       <el-empty description="暂无待上菜菜品" :image-size="60" />
     </div>
+
+    <div v-else-if="isMobile" class="serve-mobile-list">
+      <div v-for="row in pendingItems" :key="row.id" class="serve-mobile-card">
+        <div class="serve-mobile-head">
+          <div class="serve-dish-name">{{ row.dishName }}</div>
+          <el-tag size="small" type="warning">待上 {{ row.quantity }} 份</el-tag>
+        </div>
+        <el-input-number
+          v-model="serveQuantities[row.id]"
+          :min="1"
+          :max="row.quantity"
+          :step="1"
+          :precision="0"
+          step-strictly
+          controls-position="right"
+          style="width: 100%; margin-top: 12px"
+        />
+        <el-button
+          type="success"
+          style="width: 100%; margin-top: 12px"
+          :loading="servingItemId === row.id"
+          @click="handleServe(row)"
+        >
+          上菜
+        </el-button>
+      </div>
+    </div>
+
     <div v-else class="table-scroll">
       <el-table :data="pendingItems" size="small">
         <el-table-column prop="dishName" label="菜品" />
@@ -134,7 +164,50 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.serve-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.serve-mobile-card {
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.serve-mobile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.serve-dish-name {
+  font-weight: 600;
+  color: #303133;
+}
+
 .table-scroll {
   overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .serve-dialog :deep(.el-dialog.is-fullscreen) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .serve-dialog :deep(.el-dialog__body) {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .serve-dialog :deep(.el-dialog__footer) {
+    border-top: 1px solid #ebeef5;
+    background: #fff;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <el-container style="height: 100vh">
+  <el-container class="merchant-layout">
     <el-aside v-if="!isMobile" width="200px" style="background: #304156">
       <div class="sidebar-title">铜锅涮肉</div>
       <el-menu
@@ -85,7 +85,7 @@
       </el-menu>
     </el-drawer>
 
-    <el-container>
+    <el-container class="merchant-shell">
       <el-header class="app-header">
         <el-button
           v-if="isMobile"
@@ -99,7 +99,7 @@
         <span class="user-name">{{ user.username || user.name }}</span>
         <el-button @click="handleLogout" text>退出登录</el-button>
       </el-header>
-      <el-main>
+      <el-main class="app-main">
         <router-view />
       </el-main>
     </el-container>
@@ -149,6 +149,16 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
+.merchant-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f5f7fa;
+}
+
+.merchant-shell {
+  min-width: 0;
+}
+
 .sidebar-title {
   color: #fff;
   text-align: center;
@@ -161,8 +171,18 @@ const handleLogout = async () => {
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
+  padding: 0 16px;
   background: #fff;
   border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.app-main {
+  min-width: 0;
+  padding: 20px;
+  overflow-x: hidden;
 }
 
 .spacer {
@@ -191,8 +211,19 @@ const handleLogout = async () => {
 }
 
 @media (max-width: 768px) {
-  .el-main {
-    padding: 10px;
+  .app-header {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .app-main {
+    padding: 10px 10px calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .user-name {
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 </style>
