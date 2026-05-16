@@ -38,6 +38,8 @@ const handleLogin = async () => {
     if (phone.value) {
       await customerLogin({ phone: phone.value })
       localStorage.setItem('customerPhone', phone.value)
+    } else {
+      localStorage.removeItem('customerPhone')
     }
     localStorage.setItem('currentTableId', route.params.tableId)
     router.push('/c/order/' + route.params.tableId)

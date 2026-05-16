@@ -97,10 +97,11 @@ const handleUpload = async ({ file }) => {
 const handleSubmit = async () => {
   loading.value = true
   try {
+    const payload = { ...form.value }
     if (isEdit.value) {
-      await updateDish({ ...form.value, price: Math.round(form.value.price * 100) })
+      await updateDish(payload)
     } else {
-      await addDish({ ...form.value, price: Math.round(form.value.price * 100) })
+      await addDish(payload)
     }
     ElMessage.success('保存成功')
     emit('saved')

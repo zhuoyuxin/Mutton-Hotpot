@@ -1,5 +1,6 @@
 package com.tongguo.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,18 +19,27 @@ public class UploadService {
 
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "webp");
 
+    @Value("${app.base-dir}")
+    private String appBaseDir;
+
     public String uploadImage(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
-            throw new IllegalArgumentException("文件名不能为空");
+            throw new IllegalArgumentException("File name is required");
         }
-        String ext = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+
+        int dotIndex = originalFilename.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == originalFilename.length() - 1) {
+            throw new IllegalArgumentException("Image extension is required");
+        }
+
+        String ext = originalFilename.substring(dotIndex + 1).toLowerCase();
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            throw new IllegalArgumentException("仅支持 jpg、jpeg、png、webp 格式");
+            throw new IllegalArgumentException("Only jpg, jpeg, png and webp are supported");
         }
 
         String yearMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        Path dir = Paths.get(System.getProperty("user.dir"), "uploads", "dish", yearMonth);
+        Path dir = Paths.get(appBaseDir, "uploads", "dish", yearMonth);
         Files.createDirectories(dir);
 
         String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;

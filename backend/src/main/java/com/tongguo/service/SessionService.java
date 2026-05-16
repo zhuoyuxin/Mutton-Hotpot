@@ -1,9 +1,23 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.tongguo.dto.*;
-import com.tongguo.entity.*;
-import com.tongguo.mapper.*;
+import com.tongguo.dto.CheckoutHistoryDTO;
+import com.tongguo.dto.DishSummaryDTO;
+import com.tongguo.dto.SessionDetailDTO;
+import com.tongguo.entity.Customer;
+import com.tongguo.entity.DiningSession;
+import com.tongguo.entity.OrderItem;
+import com.tongguo.entity.Orders;
+import com.tongguo.entity.PointsRecord;
+import com.tongguo.entity.SessionCheckout;
+import com.tongguo.entity.TableInfo;
+import com.tongguo.mapper.CustomerMapper;
+import com.tongguo.mapper.DiningSessionMapper;
+import com.tongguo.mapper.OrderItemMapper;
+import com.tongguo.mapper.OrdersMapper;
+import com.tongguo.mapper.PointsRecordMapper;
+import com.tongguo.mapper.SessionCheckoutMapper;
+import com.tongguo.mapper.TableInfoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -12,7 +26,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,6 +65,8 @@ public class SessionService {
 
     @Transactional
     public DiningSession getOrCreateSession(Integer tableId) {
+        requireTable(tableId);
+
         DiningSession session = findActiveSessionByTableId(tableId);
         if (session != null) {
             syncTableStatus(tableId, 1);
@@ -61,6 +84,7 @@ public class SessionService {
                 throw e;
             }
         }
+
         if (session.getId() == null) {
             session = findActiveSessionByTableId(tableId);
         }
@@ -85,7 +109,9 @@ public class SessionService {
 
     public SessionDetailDTO getDetail(Integer sessionId) {
         DiningSession session = sessionMapper.selectById(sessionId);
-        if (session == null) throw new IllegalArgumentException("会话不存在");
+        if (session == null) {
+            throw new IllegalArgumentException("Session does not exist");
+        }
 
         List<Orders> orders = ordersMapper.selectList(
                 new LambdaQueryWrapper<Orders>()
@@ -99,8 +125,7 @@ public class SessionService {
                 .collect(Collectors.toList());
         List<OrderItem> allItems = orderIds.isEmpty() ? Collections.emptyList() :
                 orderItemMapper.selectList(
-                        new LambdaQueryWrapper<OrderItem>()
-                                .in(OrderItem::getOrderId, orderIds)
+                        new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds)
                 );
         Map<Integer, List<OrderItem>> itemsByOrder = allItems.stream()
                 .collect(Collectors.groupingBy(OrderItem::getOrderId));
@@ -136,7 +161,7 @@ public class SessionService {
 
         DiningSession session = sessionMapper.selectById(sessionId);
         if (session == null || session.getStatus() != 0) {
-            throw new IllegalArgumentException("会话不存在或已结束");
+            throw new IllegalArgumentException("Session does not exist or is already closed");
         }
 
         List<Orders> orders = ordersMapper.selectList(
@@ -144,15 +169,16 @@ public class SessionService {
                         .eq(Orders::getSessionId, sessionId)
                         .notIn(Orders::getStatus, 4, 5)
         );
-
         for (Orders order : orders) {
-            if (order.getStatus() == 0) {
-                throw new IllegalArgumentException("存在待确认订单，请先确认或取消后再结账");
+            if (Objects.equals(order.getStatus(), 0)) {
+                throw new IllegalArgumentException("There are unconfirmed orders in this session");
             }
         }
 
-        List<Integer> orderIds = new ArrayList<>();
-        for (Orders order : orders) { orderIds.add(order.getId()); }
+        List<Integer> orderIds = orders.stream()
+                .map(Orders::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         List<OrderItem> allItems = orderIds.isEmpty() ? Collections.emptyList() :
                 orderItemMapper.selectList(
                         new LambdaQueryWrapper<OrderItem>()
@@ -166,13 +192,13 @@ public class SessionService {
         }
 
         if (actualPaidFen == null) {
-            throw new IllegalArgumentException("实收金额不能为空");
+            throw new IllegalArgumentException("Actual paid amount is required");
         }
         if (actualPaidFen < 0) {
-            throw new IllegalArgumentException("实收金额不能小于0");
+            throw new IllegalArgumentException("Actual paid amount cannot be negative");
         }
         if (actualPaidFen > totalAmount) {
-            throw new IllegalArgumentException("实收金额不能大于应结金额");
+            throw new IllegalArgumentException("Actual paid amount cannot exceed total amount");
         }
 
         int discountAmount = totalAmount - actualPaidFen;
@@ -211,14 +237,15 @@ public class SessionService {
             pointsRecord.setCheckoutId(checkout.getId());
             pointsRecord.setPoints(pointsEarned);
             pointsRecord.setType(0);
-            pointsRecord.setRemark("消费获得");
+            pointsRecord.setRemark("earned from checkout");
             pointsRecordMapper.insert(pointsRecord);
 
-            Customer customer = customerMapper.selectById(customerId);
-            customer.setPoints(customer.getPoints() + pointsEarned);
-            customer.setTotalSpent(customer.getTotalSpent() + actualPaidFen);
-            customer.setUpdateTime(LocalDateTime.now());
-            customerMapper.updateById(customer);
+            int affected = customerMapper.adjustBalances(customerId, pointsEarned, actualPaidFen);
+            if (affected == 0) {
+                throw new IllegalArgumentException("Customer does not exist");
+            }
+
+            ordersMapper.updateCustomerBySessionId(sessionId, customerId);
         }
 
         for (Orders order : orders) {
@@ -230,10 +257,20 @@ public class SessionService {
         session.setStatus(1);
         session.setEndTime(LocalDateTime.now());
         sessionMapper.updateById(session);
-
         syncTableStatus(session.getTableId(), 0);
 
         return checkout;
+    }
+
+    private TableInfo requireTable(Integer tableId) {
+        if (tableId == null) {
+            throw new IllegalArgumentException("Table id is required");
+        }
+        TableInfo table = tableInfoMapper.selectById(tableId);
+        if (table == null) {
+            throw new IllegalArgumentException("Table does not exist");
+        }
+        return table;
     }
 
     private DiningSession findActiveSessionByTableId(Integer tableId) {
@@ -259,10 +296,10 @@ public class SessionService {
     public List<CheckoutHistoryDTO> getCheckoutHistory(String startDate, String endDate) {
         LambdaQueryWrapper<SessionCheckout> wrapper = new LambdaQueryWrapper<>();
         if (startDate != null && !startDate.isEmpty()) {
-            wrapper.ge(SessionCheckout::getCheckoutTime, parseDateOrThrow(startDate, "开始日期格式不正确").atStartOfDay());
+            wrapper.ge(SessionCheckout::getCheckoutTime, parseDateOrThrow(startDate, "Invalid start date").atStartOfDay());
         }
         if (endDate != null && !endDate.isEmpty()) {
-            wrapper.le(SessionCheckout::getCheckoutTime, parseDateOrThrow(endDate, "结束日期格式不正确").atTime(23, 59, 59));
+            wrapper.le(SessionCheckout::getCheckoutTime, parseDateOrThrow(endDate, "Invalid end date").atTime(23, 59, 59));
         }
         wrapper.orderByDesc(SessionCheckout::getCheckoutTime);
         List<SessionCheckout> checkouts = checkoutMapper.selectList(wrapper);
@@ -278,7 +315,7 @@ public class SessionService {
             List<DiningSession> sessions = sessionMapper.selectList(
                     new LambdaQueryWrapper<DiningSession>().in(DiningSession::getId, sessionIds)
             );
-            sessionMap = sessions.stream().collect(Collectors.toMap(DiningSession::getId, s -> s));
+            sessionMap = sessions.stream().collect(Collectors.toMap(DiningSession::getId, session -> session));
 
             Set<Integer> tableIds = sessions.stream()
                     .map(DiningSession::getTableId)
@@ -287,22 +324,22 @@ public class SessionService {
             if (!tableIds.isEmpty()) {
                 tableMap = tableInfoMapper.selectList(
                         new LambdaQueryWrapper<TableInfo>().in(TableInfo::getId, tableIds)
-                ).stream().collect(Collectors.toMap(TableInfo::getId, t -> t));
+                ).stream().collect(Collectors.toMap(TableInfo::getId, table -> table));
             }
         }
 
         List<CheckoutHistoryDTO> result = new ArrayList<>();
-        for (SessionCheckout c : checkouts) {
+        for (SessionCheckout checkout : checkouts) {
             CheckoutHistoryDTO dto = new CheckoutHistoryDTO();
-            dto.setId(c.getId());
-            dto.setSessionId(c.getSessionId());
-            dto.setTotalAmount(c.getTotalAmount());
-            dto.setActualPaid(c.getActualPaid());
-            dto.setDiscountAmount(c.getDiscountAmount());
-            dto.setPointsEarned(c.getPointsEarned());
-            dto.setCheckoutTime(c.getCheckoutTime());
+            dto.setId(checkout.getId());
+            dto.setSessionId(checkout.getSessionId());
+            dto.setTotalAmount(checkout.getTotalAmount());
+            dto.setActualPaid(checkout.getActualPaid());
+            dto.setDiscountAmount(checkout.getDiscountAmount());
+            dto.setPointsEarned(checkout.getPointsEarned());
+            dto.setCheckoutTime(checkout.getCheckoutTime());
 
-            DiningSession session = sessionMap.get(c.getSessionId());
+            DiningSession session = sessionMap.get(checkout.getSessionId());
             if (session != null && session.getTableId() != null) {
                 TableInfo table = tableMap.get(session.getTableId());
                 if (table != null) {

@@ -1,16 +1,26 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.tongguo.dto.*;
-import com.tongguo.entity.*;
-import com.tongguo.mapper.*;
+import com.tongguo.dto.HourlyDTO;
+import com.tongguo.dto.RevenueTrendDTO;
+import com.tongguo.dto.TopDishDTO;
+import com.tongguo.entity.OrderItem;
+import com.tongguo.entity.Orders;
+import com.tongguo.entity.SessionCheckout;
+import com.tongguo.mapper.OrderItemMapper;
+import com.tongguo.mapper.OrdersMapper;
+import com.tongguo.mapper.SessionCheckoutMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,26 +35,6 @@ public class StatisticsService {
     @Autowired
     private OrderItemMapper orderItemMapper;
 
-    private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {
-        try {
-            return LocalDate.parse(dateStr);
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(errorMsg);
-        }
-    }
-
-    private LocalDate resolveStart(String startDate) {
-        return startDate != null && !startDate.isEmpty()
-                ? parseDateOrThrow(startDate, "开始日期格式不正确")
-                : LocalDate.now().minusDays(6);
-    }
-
-    private LocalDate resolveEnd(String endDate) {
-        return endDate != null && !endDate.isEmpty()
-                ? parseDateOrThrow(endDate, "结束日期格式不正确")
-                : LocalDate.now();
-    }
-
     public List<RevenueTrendDTO> getRevenueTrend(String startDate, String endDate) {
         LocalDate start = resolveStart(startDate);
         LocalDate end = resolveEnd(endDate);
@@ -56,13 +46,16 @@ public class StatisticsService {
         );
 
         Map<LocalDate, Long> revenueByDate = new LinkedHashMap<>();
-        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            revenueByDate.put(d, 0L);
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            revenueByDate.put(date, 0L);
         }
-        for (SessionCheckout c : checkouts) {
-            if (c.getCheckoutTime() == null) continue;
-            LocalDate date = c.getCheckoutTime().toLocalDate();
-            long paid = c.getActualPaid() != null ? c.getActualPaid() : 0;
+
+        for (SessionCheckout checkout : checkouts) {
+            if (checkout.getCheckoutTime() == null) {
+                continue;
+            }
+            LocalDate date = checkout.getCheckoutTime().toLocalDate();
+            long paid = checkout.getActualPaid() != null ? checkout.getActualPaid() : 0;
             revenueByDate.merge(date, paid, Long::sum);
         }
 
@@ -85,18 +78,26 @@ public class StatisticsService {
                         .ge(SessionCheckout::getCheckoutTime, start.atStartOfDay())
                         .le(SessionCheckout::getCheckoutTime, end.atTime(LocalTime.MAX))
         );
-        if (checkouts.isEmpty()) return Collections.emptyList();
+        if (checkouts.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        List<Integer> sessionIds = checkouts.stream().map(SessionCheckout::getSessionId).collect(Collectors.toList());
+        List<Integer> sessionIds = checkouts.stream()
+                .map(SessionCheckout::getSessionId)
+                .collect(Collectors.toList());
 
         List<Orders> settledOrders = ordersMapper.selectList(
                 new LambdaQueryWrapper<Orders>()
                         .in(Orders::getSessionId, sessionIds)
                         .eq(Orders::getStatus, 4)
         );
-        if (settledOrders.isEmpty()) return Collections.emptyList();
+        if (settledOrders.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        List<Integer> orderIds = settledOrders.stream().map(Orders::getId).collect(Collectors.toList());
+        List<Integer> orderIds = settledOrders.stream()
+                .map(Orders::getId)
+                .collect(Collectors.toList());
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>()
                         .in(OrderItem::getOrderId, orderIds)
@@ -107,7 +108,7 @@ public class StatisticsService {
         for (OrderItem item : items) {
             long qty = item.getQuantity() != null ? item.getQuantity() : 0;
             long price = item.getDishPrice() != null ? item.getDishPrice() : 0;
-            long[] acc = dishAgg.computeIfAbsent(item.getDishName(), k -> new long[]{0, 0});
+            long[] acc = dishAgg.computeIfAbsent(item.getDishName(), key -> new long[]{0, 0});
             acc[0] += qty;
             acc[1] += price * qty;
         }
@@ -121,7 +122,7 @@ public class StatisticsService {
             dishList.add(dto);
         }
 
-        dishList.sort((a, b) -> Long.compare(b.getRevenue(), a.getRevenue()));
+        dishList.sort((left, right) -> Long.compare(right.getRevenue(), left.getRevenue()));
         int effectiveLimit = limit != null ? limit : 10;
         return dishList.stream().limit(effectiveLimit).collect(Collectors.toList());
     }
@@ -138,11 +139,14 @@ public class StatisticsService {
         );
 
         Map<Integer, Integer> hourMap = new LinkedHashMap<>();
-        for (int h = 0; h < 24; h++) {
-            hourMap.put(h, 0);
+        for (int hour = 0; hour < 24; hour++) {
+            hourMap.put(hour, 0);
         }
+
         for (Orders order : orders) {
-            if (order.getCreateTime() == null) continue;
+            if (order.getCreateTime() == null) {
+                continue;
+            }
             int hour = order.getCreateTime().getHour();
             hourMap.merge(hour, 1, Integer::sum);
         }
@@ -155,5 +159,25 @@ public class StatisticsService {
             result.add(dto);
         }
         return result;
+    }
+
+    private LocalDate resolveStart(String startDate) {
+        return startDate != null && !startDate.isEmpty()
+                ? parseDateOrThrow(startDate, "Invalid start date")
+                : LocalDate.now().minusDays(6);
+    }
+
+    private LocalDate resolveEnd(String endDate) {
+        return endDate != null && !endDate.isEmpty()
+                ? parseDateOrThrow(endDate, "Invalid end date")
+                : LocalDate.now();
+    }
+
+    private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(errorMsg);
+        }
     }
 }

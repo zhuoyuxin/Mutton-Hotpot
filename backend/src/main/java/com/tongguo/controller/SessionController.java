@@ -7,7 +7,13 @@ import com.tongguo.entity.DiningSession;
 import com.tongguo.entity.SessionCheckout;
 import com.tongguo.service.SessionService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,38 +29,33 @@ public class SessionController {
 
     @GetMapping("/current/{tableId}")
     public Result<DiningSession> current(@PathVariable Integer tableId) {
-        DiningSession session = sessionService.getCurrentByTableId(tableId);
-        return Result.ok(session);
+        return Result.ok(sessionService.getCurrentByTableId(tableId));
     }
 
     @GetMapping("/detail/{id}")
     public Result<SessionDetailDTO> detail(@PathVariable Integer id) {
-        try {
-            return Result.ok(sessionService.getDetail(id));
-        } catch (IllegalArgumentException e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.ok(sessionService.getDetail(id));
     }
 
     @GetMapping("/history")
     public Result<List<CheckoutHistoryDTO>> history(@RequestParam(required = false) String startDate,
-                                                      @RequestParam(required = false) String endDate) {
+                                                    @RequestParam(required = false) String endDate) {
         return Result.ok(sessionService.getCheckoutHistory(startDate, endDate));
     }
 
     @PutMapping("/checkout/{id}")
     public Result<SessionCheckout> checkout(@PathVariable Integer id,
-                                             @RequestBody Map<String, Object> params) {
+                                            @RequestBody Map<String, Object> params) {
+        if (params == null || !params.containsKey("actualPaid")) {
+            return Result.error("Actual paid amount is required");
+        }
+
         try {
-            if (params == null || !params.containsKey("actualPaid")) {
-                return Result.error("实收金额不能为空");
-            }
             Integer actualPaidFen = parseActualPaidFen(params.get("actualPaid"));
             String phone = (String) params.get("phone");
-            SessionCheckout checkout = sessionService.checkout(id, actualPaidFen, phone);
-            return Result.ok(checkout);
+            return Result.ok(sessionService.checkout(id, actualPaidFen, phone));
         } catch (NumberFormatException | ArithmeticException e) {
-            return Result.error("实收金额格式不正确");
+            return Result.error("Actual paid amount format is invalid");
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }
@@ -62,13 +63,15 @@ public class SessionController {
 
     private Integer parseActualPaidFen(Object paidObj) {
         if (paidObj == null) {
-            throw new IllegalArgumentException("实收金额不能为空");
+            throw new IllegalArgumentException("Actual paid amount is required");
         }
+
         String raw = paidObj.toString().trim();
         if (raw.isEmpty()) {
-            throw new IllegalArgumentException("实收金额不能为空");
+            throw new IllegalArgumentException("Actual paid amount is required");
         }
-        BigDecimal bd = new BigDecimal(raw).setScale(2, RoundingMode.HALF_UP);
-        return bd.multiply(new BigDecimal(100)).intValueExact();
+
+        BigDecimal amount = new BigDecimal(raw).setScale(2, RoundingMode.HALF_UP);
+        return amount.multiply(new BigDecimal(100)).intValueExact();
     }
 }

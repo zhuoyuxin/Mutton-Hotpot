@@ -5,7 +5,14 @@ import com.tongguo.entity.OrderItem;
 import com.tongguo.entity.Orders;
 import com.tongguo.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -17,13 +24,17 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/api/c/order/create")
-    public Result<Orders> customerCreate(@RequestBody Map<String, Object> params) {
+    public Result<Orders> customerCreate(@RequestBody Map<String, Object> params,
+                                         @RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         try {
+            String phoneFromHeader = extractPhone(phoneHeader);
+            String phoneFromBody = (String) params.get("phone");
+            String phone = phoneFromHeader != null ? phoneFromHeader : phoneFromBody;
             Orders order = orderService.createOrder(
                     toInt(params.get("tableId")),
                     null,
                     (List<Map<String, Object>>) params.get("items"),
-                    (String) params.get("phone"),
+                    phone,
                     (String) params.get("remark")
             );
             return Result.ok(order);
@@ -39,10 +50,10 @@ public class OrderController {
 
     @GetMapping("/api/m/order/list")
     public Result<List<Orders>> list(@RequestParam(required = false) Integer status,
-                                      @RequestParam(required = false) Integer tableId,
-                                      @RequestParam(required = false) List<Integer> statuses,
-                                      @RequestParam(required = false) String startDate,
-                                      @RequestParam(required = false) String endDate) {
+                                     @RequestParam(required = false) Integer tableId,
+                                     @RequestParam(required = false) List<Integer> statuses,
+                                     @RequestParam(required = false) String startDate,
+                                     @RequestParam(required = false) String endDate) {
         return Result.ok(orderService.listOrders(status, tableId, statuses, startDate, endDate));
     }
 
@@ -106,5 +117,12 @@ public class OrderController {
     private Integer toInt(Object obj) {
         if (obj == null) return null;
         return ((Number) obj).intValue();
+    }
+
+    private String extractPhone(String phoneHeader) {
+        if (phoneHeader == null || phoneHeader.trim().isEmpty()) {
+            return null;
+        }
+        return phoneHeader.trim();
     }
 }

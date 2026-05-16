@@ -21,7 +21,13 @@
             <div class="dish-qty">
               <el-button v-if="cart[dish.id]" size="small" circle @click="changeQty(dish.id, -1)">-</el-button>
               <span v-if="cart[dish.id]" class="qty-num">{{ cart[dish.id] }}</span>
-              <el-button size="small" circle type="danger" @click="changeQty(dish.id, 1)">+</el-button>
+              <el-button
+                size="small"
+                circle
+                type="danger"
+                :disabled="dish.stock <= 0 || (cart[dish.id] || 0) >= dish.stock"
+                @click="changeQty(dish.id, 1)"
+              >+</el-button>
             </div>
           </div>
         </div>
@@ -48,7 +54,12 @@
         <div>
           <el-button size="small" circle @click="changeQty(item.dishId, -1)">-</el-button>
           <span style="margin:0 8px">{{ item.qty }}</span>
-          <el-button size="small" circle @click="changeQty(item.dishId, 1)">+</el-button>
+          <el-button
+            size="small"
+            circle
+            :disabled="currentDishStock(item.dishId) <= item.qty"
+            @click="changeQty(item.dishId, 1)"
+          >+</el-button>
           <span style="margin-left:10px; color:#f56c6c">&yen;{{ formatPrice(item.price * item.qty) }}</span>
         </div>
       </div>
@@ -59,7 +70,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { ShoppingCart } from '@element-plus/icons-vue'
 import { customerList } from '../../api/dish'
 import { customerCreate } from '../../api/order'
@@ -94,9 +105,35 @@ const cartItems = computed(() => {
 const totalCount = computed(() => Object.values(cart).reduce((s, q) => s + q, 0))
 const totalPrice = computed(() => cartItems.value.reduce((s, i) => s + i.price * i.qty, 0))
 
+const resetCart = () => {
+  Object.keys(cart).forEach(key => delete cart[key])
+}
+
+const loadCart = (targetTableId) => {
+  resetCart()
+  const savedCart = localStorage.getItem('cart_' + targetTableId)
+  if (!savedCart) {
+    return
+  }
+  try {
+    Object.assign(cart, JSON.parse(savedCart))
+  } catch (e) {
+    localStorage.removeItem('cart_' + targetTableId)
+  }
+}
+
+const currentDishStock = (dishId) => {
+  const dish = dishes.value.find(d => d.id === Number(dishId))
+  return dish?.stock || 0
+}
+
 const changeQty = (dishId, delta) => {
   const newVal = (cart[dishId] || 0) + delta
   if (newVal < 0) return
+  if (delta > 0 && newVal > currentDishStock(dishId)) {
+    ElMessage.warning('已达到当前库存上限')
+    return
+  }
   if (newVal === 0) {
     delete cart[dishId]
   } else {
@@ -141,15 +178,21 @@ const handleSubmit = async () => {
 
 onMounted(() => {
   loadData()
-  const savedCart = localStorage.getItem('cart_' + tableId.value)
-  if (savedCart) {
-    try { Object.assign(cart, JSON.parse(savedCart)) } catch (e) {}
-  }
+  loadCart(tableId.value)
 })
 
 watch(cart, (val) => {
   localStorage.setItem('cart_' + tableId.value, JSON.stringify(val))
 }, { deep: true })
+
+watch(tableId, (newTableId, oldTableId) => {
+  if (newTableId === oldTableId) {
+    return
+  }
+  activeCategory.value = 0
+  showCartDetail.value = false
+  loadCart(newTableId)
+})
 </script>
 
 <style scoped>

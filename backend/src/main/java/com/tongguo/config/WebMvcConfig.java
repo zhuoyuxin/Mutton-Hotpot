@@ -1,6 +1,7 @@
 package com.tongguo.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -12,6 +13,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private AuthInterceptor authInterceptor;
+
+    @Value("${app.base-dir}")
+    private String appBaseDir;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -32,6 +36,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + System.getProperty("user.dir") + "/uploads/");
+                .addResourceLocations("file:" + appBaseDir + "/uploads/");
     }
 }

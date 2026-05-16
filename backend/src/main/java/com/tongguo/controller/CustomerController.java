@@ -4,12 +4,19 @@ import com.tongguo.config.Result;
 import com.tongguo.dto.CustomerDetailDTO;
 import com.tongguo.dto.CustomerInfoDTO;
 import com.tongguo.entity.Customer;
-import com.tongguo.entity.PointsRecord;
 import com.tongguo.entity.Orders;
+import com.tongguo.entity.PointsRecord;
 import com.tongguo.service.CustomerService;
 import com.tongguo.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -37,8 +44,10 @@ public class CustomerController {
         return Result.ok(dto);
     }
 
-    private String extractPhone(String phoneHeader) {
-        if (phoneHeader == null || phoneHeader.trim().isEmpty()) return null;
+    public String extractPhone(String phoneHeader) {
+        if (phoneHeader == null || phoneHeader.trim().isEmpty()) {
+            return null;
+        }
         return phoneHeader.trim();
     }
 
@@ -46,11 +55,11 @@ public class CustomerController {
     public Result<CustomerInfoDTO> customerInfo(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         String phone = extractPhone(phoneHeader);
         if (phone == null) {
-            return Result.error(40101, "请先登录");
+            return Result.error(40101, "Please login first");
         }
         Customer customer = customerService.getByPhone(phone);
         if (customer == null) {
-            return Result.error(40101, "请先登录");
+            return Result.error(40101, "Please login first");
         }
         CustomerInfoDTO dto = new CustomerInfoDTO();
         dto.setId(customer.getId());
@@ -62,20 +71,20 @@ public class CustomerController {
     }
 
     @GetMapping("/api/c/customer/orders")
-    public Result<?> customerOrders(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
+    public Result<List<Orders>> customerOrders(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         String phone = extractPhone(phoneHeader);
-        if (phone == null) return Result.error(40101, "请先登录");
+        if (phone == null) return Result.error(40101, "Please login first");
         Customer customer = customerService.getByPhone(phone);
-        if (customer == null) return Result.error(40101, "请先登录");
+        if (customer == null) return Result.error(40101, "Please login first");
         return Result.ok(orderService.getCustomerOrders(customer.getId()));
     }
 
     @GetMapping("/api/c/customer/points")
     public Result<List<PointsRecord>> customerPoints(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         String phone = extractPhone(phoneHeader);
-        if (phone == null) return Result.error(40101, "请先登录");
+        if (phone == null) return Result.error(40101, "Please login first");
         Customer customer = customerService.getByPhone(phone);
-        if (customer == null) return Result.error(40101, "请先登录");
+        if (customer == null) return Result.error(40101, "Please login first");
         return Result.ok(customerService.getPointsRecords(customer.getId()));
     }
 
@@ -87,7 +96,7 @@ public class CustomerController {
     @GetMapping("/api/m/customer/detail/{id}")
     public Result<CustomerDetailDTO> detail(@PathVariable Integer id) {
         Customer customer = customerService.detail(id);
-        if (customer == null) return Result.error("客户不存在");
+        if (customer == null) return Result.error("Customer does not exist");
         List<PointsRecord> records = customerService.getPointsRecords(id);
         List<Orders> orders = orderService.getCustomerOrders(id);
         CustomerDetailDTO dto = new CustomerDetailDTO();
@@ -101,8 +110,8 @@ public class CustomerController {
     public Result<Void> manualPoints(@RequestBody Map<String, Object> params) {
         try {
             customerService.manualPoints(
-                    toInteger(params.get("customerId"), "客户ID"),
-                    toInteger(params.get("points"), "积分"),
+                    toInteger(params.get("customerId"), "Customer id"),
+                    toInteger(params.get("points"), "Points"),
                     (String) params.get("remark")
             );
             return Result.ok();
@@ -121,7 +130,7 @@ public class CustomerController {
         try {
             return Integer.parseInt(value.toString().trim());
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(fieldName + "格式不正确");
+            throw new IllegalArgumentException(fieldName + " format is invalid");
         }
     }
 }

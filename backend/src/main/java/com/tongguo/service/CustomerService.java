@@ -10,7 +10,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -81,18 +80,18 @@ public class CustomerService {
 
     @Transactional
     public void manualPoints(Integer customerId, Integer points, String remark) {
-        if (customerId == null) throw new IllegalArgumentException("客户ID不能为空");
-        if (points == null) throw new IllegalArgumentException("积分变动不能为空");
-        if (points == 0) throw new IllegalArgumentException("积分变动不能为0");
-        Customer customer = customerMapper.selectById(customerId);
-        if (customer == null) throw new IllegalArgumentException("客户不存在");
-        int nextPoints = customer.getPoints() + points;
-        if (nextPoints < 0) {
-            throw new IllegalArgumentException("客户积分不能小于0");
+        if (customerId == null) throw new IllegalArgumentException("Customer id is required");
+        if (points == null) throw new IllegalArgumentException("Points delta is required");
+        if (points == 0) throw new IllegalArgumentException("Points delta cannot be zero");
+
+        int affected = customerMapper.adjustBalances(customerId, points, 0);
+        if (affected == 0) {
+            Customer customer = customerMapper.selectById(customerId);
+            if (customer == null) {
+                throw new IllegalArgumentException("Customer does not exist");
+            }
+            throw new IllegalArgumentException("Customer points cannot be negative");
         }
-        customer.setPoints(nextPoints);
-        customer.setUpdateTime(LocalDateTime.now());
-        customerMapper.updateById(customer);
 
         PointsRecord record = new PointsRecord();
         record.setCustomerId(customerId);
@@ -105,7 +104,7 @@ public class CustomerService {
     public String normalizePhone(String phone) {
         String normalizedPhone = normalizeText(phone);
         if (normalizedPhone == null) {
-            throw new IllegalArgumentException("手机号不能为空");
+            throw new IllegalArgumentException("Phone is required");
         }
         return normalizedPhone;
     }

@@ -7,7 +7,7 @@
           <template #header>
             <div style="display:flex; justify-content:space-between">
               <span>分类管理</span>
-              <el-button size="small" @click="showAddCategory = true">新增分类</el-button>
+              <el-button size="small" @click="openAddCategory">新增分类</el-button>
             </div>
           </template>
           <el-table :data="categories" size="small">
@@ -25,7 +25,12 @@
       </el-col>
 
       <!-- 新增/编辑分类弹窗 -->
-      <el-dialog v-model="showAddCategory" :title="editingCategory ? '编辑分类' : '新增分类'" :width="isMobile ? '92vw' : '300px'">
+      <el-dialog
+        v-model="showAddCategory"
+        :title="editingCategory ? '编辑分类' : '新增分类'"
+        :width="isMobile ? '92vw' : '300px'"
+        @close="closeCategoryDialog"
+      >
         <el-form ref="categoryFormRef" :model="categoryForm" :rules="categoryRules">
           <el-form-item label="分类名" prop="name">
             <el-input v-model="categoryForm.name" />
@@ -35,7 +40,7 @@
           </el-form-item>
         </el-form>
         <template #footer>
-          <el-button @click="showAddCategory = false">取消</el-button>
+          <el-button @click="closeCategoryDialog">取消</el-button>
           <el-button type="primary" @click="handleSaveCategory">确定</el-button>
         </template>
       </el-dialog>
@@ -116,6 +121,22 @@ const editingDish = ref(null)
 const showStockDialog = ref(false)
 const stockForm = ref({ id: null, stock: 0 })
 
+const resetCategoryForm = () => {
+  editingCategory.value = null
+  categoryForm.value = { name: '', sortOrder: 0 }
+  categoryFormRef.value?.clearValidate?.()
+}
+
+const openAddCategory = () => {
+  resetCategoryForm()
+  showAddCategory.value = true
+}
+
+const closeCategoryDialog = () => {
+  showAddCategory.value = false
+  resetCategoryForm()
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -144,9 +165,7 @@ const handleSaveCategory = async () => {
     await addCategory(categoryForm.value)
   }
   ElMessage.success('保存成功')
-  showAddCategory.value = false
-  editingCategory.value = null
-  categoryForm.value = { name: '', sortOrder: 0 }
+  closeCategoryDialog()
   loadData()
 }
 

@@ -1,8 +1,17 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.tongguo.entity.*;
-import com.tongguo.mapper.*;
+import com.tongguo.entity.Customer;
+import com.tongguo.entity.DiningSession;
+import com.tongguo.entity.Dish;
+import com.tongguo.entity.OrderItem;
+import com.tongguo.entity.Orders;
+import com.tongguo.entity.TableInfo;
+import com.tongguo.mapper.DiningSessionMapper;
+import com.tongguo.mapper.DishMapper;
+import com.tongguo.mapper.OrderItemMapper;
+import com.tongguo.mapper.OrdersMapper;
+import com.tongguo.mapper.TableInfoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,12 +20,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+
+    private static final int ORDER_STATUS_PROCESSING_CONFIRM = -1;
+    private static final int ORDER_STATUS_PROCESSING_CANCEL = -2;
 
     @Autowired
     private OrdersMapper ordersMapper;
@@ -41,55 +59,51 @@ public class OrderService {
 
     @Transactional
     public Orders createOrder(Integer tableId, Integer sessionId,
-                               List<Map<String, Object>> items,
-                               String phone, String remark) {
+                              List<Map<String, Object>> items,
+                              String phone, String remark) {
         validateCreateOrderItems(items);
 
         DiningSession session;
         if (sessionId != null) {
             session = sessionMapper.selectById(sessionId);
             if (session == null || session.getStatus() != 0) {
-                throw new IllegalArgumentException("会话不存在或已结束");
+                throw new IllegalArgumentException("Session does not exist or is already closed");
             }
         } else if (tableId != null) {
             session = sessionService.getOrCreateSession(tableId);
         } else {
             session = sessionService.createWalkInSession();
         }
+
         Integer resolvedTableId = session.getTableId();
         if (sessionId != null && tableId != null && !Objects.equals(tableId, resolvedTableId)) {
-            throw new IllegalArgumentException("桌台与会话不匹配");
+            throw new IllegalArgumentException("Table does not match the session");
         }
 
-        String orderNo = generateOrderNo();
-
+        List<PendingOrderItem> pendingItems = new ArrayList<>();
+        Map<Integer, Integer> requestedQtyByDishId = new LinkedHashMap<>();
         int totalAmount = 0;
-        List<OrderItem> orderItems = new ArrayList<>();
         for (Map<String, Object> item : items) {
-            Integer dishId = toRequiredInt(item.get("dishId"), "菜品ID");
-            Integer quantity = toRequiredInt(item.get("quantity"), "菜品数量");
+            Integer dishId = toRequiredInt(item.get("dishId"), "Dish id");
+            Integer quantity = toRequiredInt(item.get("quantity"), "Dish quantity");
             if (quantity <= 0) {
-                throw new IllegalArgumentException("菜品数量必须大于0");
+                throw new IllegalArgumentException("Dish quantity must be greater than 0");
             }
+
             Dish dish = dishMapper.selectById(dishId);
             if (dish == null) {
-                throw new IllegalArgumentException("存在已失效的菜品，请刷新后重试");
+                throw new IllegalArgumentException("Dish does not exist anymore, please refresh and retry");
+            }
+            if (!Objects.equals(dish.getStatus(), 1)) {
+                throw new IllegalArgumentException("Dish is no longer on sale, please refresh and retry");
             }
 
-            OrderItem oi = new OrderItem();
-            oi.setDishId(dishId);
-            oi.setDishName(dish.getName());
-            oi.setDishPrice(dish.getPrice());
-            oi.setQuantity(quantity);
-            oi.setStatus(0);
-            orderItems.add(oi);
-
+            requestedQtyByDishId.merge(dishId, quantity, Integer::sum);
+            pendingItems.add(new PendingOrderItem(dish, quantity));
             totalAmount += dish.getPrice() * quantity;
         }
 
-        if (orderItems.isEmpty()) {
-            throw new IllegalArgumentException("订单至少需要一个有效菜品");
-        }
+        validateSellableStock(requestedQtyByDishId, pendingItems);
 
         Integer customerId = null;
         if (phone != null && !phone.trim().isEmpty()) {
@@ -98,7 +112,7 @@ public class OrderService {
         }
 
         Orders order = new Orders();
-        order.setOrderNo(orderNo);
+        order.setOrderNo(generateOrderNo());
         order.setSessionId(session.getId());
         order.setTableId(resolvedTableId);
         order.setCustomerId(customerId);
@@ -107,13 +121,37 @@ public class OrderService {
         order.setRemark(remark);
         ordersMapper.insert(order);
 
-        for (OrderItem oi : orderItems) {
-            oi.setOrderId(order.getId());
-            orderItemMapper.insert(oi);
+        List<OrderItem> orderItems = new ArrayList<>();
+        for (PendingOrderItem pendingItem : pendingItems) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderId(order.getId());
+            orderItem.setDishId(pendingItem.dish.getId());
+            orderItem.setDishName(pendingItem.dish.getName());
+            orderItem.setDishPrice(pendingItem.dish.getPrice());
+            orderItem.setQuantity(pendingItem.quantity);
+            orderItem.setStatus(0);
+            orderItemMapper.insert(orderItem);
+            orderItems.add(orderItem);
         }
 
         order.setItems(orderItems);
         return order;
+    }
+
+    private void validateSellableStock(Map<Integer, Integer> requestedQtyByDishId, List<PendingOrderItem> pendingItems) {
+        Map<Integer, Dish> dishById = pendingItems.stream()
+                .collect(Collectors.toMap(item -> item.dish.getId(), item -> item.dish, (left, right) -> left));
+
+        for (Map.Entry<Integer, Integer> entry : requestedQtyByDishId.entrySet()) {
+            Dish dish = dishById.get(entry.getKey());
+            int currentStock = dish.getStock() == null ? 0 : dish.getStock();
+            Integer pendingQtyRaw = orderItemMapper.sumPendingQuantityByDishId(entry.getKey());
+            int pendingQty = pendingQtyRaw == null ? 0 : pendingQtyRaw;
+            int availableToOrder = currentStock - pendingQty;
+            if (entry.getValue() > availableToOrder) {
+                throw new IllegalArgumentException("Insufficient stock for dish: " + dish.getName());
+            }
+        }
     }
 
     private String generateOrderNo() {
@@ -123,17 +161,16 @@ public class OrderService {
     }
 
     public List<Orders> listOrders(Integer status, Integer tableId,
-                                    List<Integer> statuses, String startDate, String endDate) {
-        // status 和 statuses 同时传入时，MyBatis Plus 会同时拼接 eq + in，效果等同于取两者交集
+                                   List<Integer> statuses, String startDate, String endDate) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         if (status != null) wrapper.eq(Orders::getStatus, status);
         if (statuses != null && !statuses.isEmpty()) wrapper.in(Orders::getStatus, statuses);
         if (tableId != null) wrapper.eq(Orders::getTableId, tableId);
         if (startDate != null && !startDate.isEmpty()) {
-            wrapper.ge(Orders::getCreateTime, parseDateOrThrow(startDate, "开始日期格式不正确").atStartOfDay());
+            wrapper.ge(Orders::getCreateTime, parseDateOrThrow(startDate, "Invalid start date").atStartOfDay());
         }
         if (endDate != null && !endDate.isEmpty()) {
-            wrapper.le(Orders::getCreateTime, parseDateOrThrow(endDate, "结束日期格式不正确").atTime(23, 59, 59));
+            wrapper.le(Orders::getCreateTime, parseDateOrThrow(endDate, "Invalid end date").atTime(23, 59, 59));
         }
         wrapper.orderByDesc(Orders::getCreateTime);
         List<Orders> orders = ordersMapper.selectList(wrapper);
@@ -158,8 +195,7 @@ public class OrderService {
 
     public List<OrderItem> getOrderItems(Integer orderId) {
         return orderItemMapper.selectList(
-                new LambdaQueryWrapper<OrderItem>()
-                        .eq(OrderItem::getOrderId, orderId)
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId)
         );
     }
 
@@ -177,22 +213,37 @@ public class OrderService {
     @Transactional
     public Orders confirmOrder(Integer orderId) {
         Orders order = ordersMapper.selectById(orderId);
-        if (order == null) throw new IllegalArgumentException("订单不存在");
-        if (order.getStatus() != 0) throw new IllegalArgumentException("订单状态不允许确认");
+        if (order == null) throw new IllegalArgumentException("Order does not exist");
+        if (isBusyStatus(order.getStatus())) {
+            throw new IllegalArgumentException("Order is being processed, please retry later");
+        }
+        if (!Objects.equals(order.getStatus(), 0)) {
+            if (Objects.equals(order.getStatus(), 4)) {
+                throw new IllegalArgumentException("Settled orders cannot be confirmed");
+            }
+            return populateItems(order);
+        }
+
+        int claimed = ordersMapper.updateStatusIfCurrent(orderId, 0, ORDER_STATUS_PROCESSING_CONFIRM);
+        if (claimed == 0) {
+            Orders latest = ordersMapper.selectById(orderId);
+            if (latest == null) throw new IllegalArgumentException("Order does not exist");
+            if (isBusyStatus(latest.getStatus())) {
+                throw new IllegalArgumentException("Order is being processed, please retry later");
+            }
+            return populateItems(latest);
+        }
 
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId)
         );
 
         for (OrderItem item : items) {
-            if (item.getStatus() != 0) continue;
-            int affected = dishMapper.deductStock(item.getDishId(), item.getQuantity());
-            if (affected > 0) {
-                item.setStatus(1);
-            } else {
-                item.setStatus(3);
+            if (!Objects.equals(item.getStatus(), 0)) {
+                continue;
             }
-            orderItemMapper.updateById(item);
+            int affected = dishMapper.deductStock(item.getDishId(), item.getQuantity());
+            orderItemMapper.updateStatusIfCurrent(item.getId(), 0, affected > 0 ? 1 : 3);
         }
 
         refreshOrderStatus(orderId);
@@ -202,58 +253,95 @@ public class OrderService {
     @Transactional
     public OrderItem serveItem(Integer itemId) {
         OrderItem item = orderItemMapper.selectById(itemId);
-        if (item == null) throw new IllegalArgumentException("订单项不存在");
-        if (item.getStatus() != 1) throw new IllegalArgumentException("只能上待上菜的菜品");
+        if (item == null) throw new IllegalArgumentException("Order item does not exist");
+
         ensureOrderMutable(item.getOrderId());
-        item.setStatus(2);
-        orderItemMapper.updateById(item);
+        if (Objects.equals(item.getStatus(), 2)) {
+            return item;
+        }
+        if (!Objects.equals(item.getStatus(), 1)) {
+            throw new IllegalArgumentException("Only waiting items can be served");
+        }
+
+        int affected = orderItemMapper.updateStatusIfCurrent(itemId, 1, 2);
+        if (affected == 0) {
+            OrderItem latest = orderItemMapper.selectById(itemId);
+            if (latest == null) throw new IllegalArgumentException("Order item does not exist");
+            if (Objects.equals(latest.getStatus(), 2)) {
+                return latest;
+            }
+            throw new IllegalArgumentException("Only waiting items can be served");
+        }
 
         refreshOrderStatus(item.getOrderId());
-        return item;
+        return orderItemMapper.selectById(itemId);
     }
 
     @Transactional
     public OrderItem cancelItem(Integer itemId) {
         OrderItem item = orderItemMapper.selectById(itemId);
-        if (item == null) throw new IllegalArgumentException("订单项不存在");
+        if (item == null) throw new IllegalArgumentException("Order item does not exist");
 
         ensureOrderMutable(item.getOrderId());
-        if (item.getStatus() == 0) {
-            item.setStatus(4);
-        } else if (item.getStatus() == 1) {
-            dishMapper.addStock(item.getDishId(), item.getQuantity());
-            item.setStatus(4);
-        } else {
-            throw new IllegalArgumentException("该状态不允许退菜");
+        if (Objects.equals(item.getStatus(), 4)) {
+            return item;
         }
-        orderItemMapper.updateById(item);
+
+        if (Objects.equals(item.getStatus(), 0)) {
+            int affected = orderItemMapper.updateStatusIfCurrent(itemId, 0, 4);
+            if (affected == 0) {
+                return resolveCancelItemRace(itemId);
+            }
+        } else if (Objects.equals(item.getStatus(), 1)) {
+            int affected = orderItemMapper.updateStatusIfCurrent(itemId, 1, 4);
+            if (affected == 0) {
+                return resolveCancelItemRace(itemId);
+            }
+            dishMapper.addStock(item.getDishId(), item.getQuantity());
+        } else {
+            throw new IllegalArgumentException("Current item status cannot be cancelled");
+        }
 
         refreshOrderStatus(item.getOrderId());
-        return item;
+        return orderItemMapper.selectById(itemId);
     }
 
     @Transactional
     public Orders cancelOrder(Integer orderId) {
         Orders order = ordersMapper.selectById(orderId);
-        if (order == null) throw new IllegalArgumentException("订单不存在");
+        if (order == null) throw new IllegalArgumentException("Order does not exist");
+        if (Objects.equals(order.getStatus(), 5)) {
+            return populateItems(order);
+        }
+        ensureOrderMutable(order);
 
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId)
         );
+        boolean hasServed = items.stream().anyMatch(item -> Objects.equals(item.getStatus(), 2));
+        if (hasServed) {
+            throw new IllegalArgumentException("Orders with served items cannot be cancelled");
+        }
 
-        ensureOrderMutable(order);
-        boolean hasServed = items.stream().anyMatch(i -> i.getStatus() == 2);
-        if (hasServed) throw new IllegalArgumentException("订单中有已上菜菜品，无法整单取消");
+        int claimed = ordersMapper.updateStatusIfCurrent(orderId, order.getStatus(), ORDER_STATUS_PROCESSING_CANCEL);
+        if (claimed == 0) {
+            Orders latest = ordersMapper.selectById(orderId);
+            if (latest == null) throw new IllegalArgumentException("Order does not exist");
+            if (Objects.equals(latest.getStatus(), 5)) {
+                return populateItems(latest);
+            }
+            ensureOrderMutable(latest);
+            return populateItems(latest);
+        }
 
         for (OrderItem item : items) {
-            if (item.getStatus() == 1) {
-                dishMapper.addStock(item.getDishId(), item.getQuantity());
-                item.setStatus(4);
-            } else if (item.getStatus() == 0) {
-                item.setStatus(4);
-            }
-            if (item.getStatus() != 3) {
-                orderItemMapper.updateById(item);
+            if (Objects.equals(item.getStatus(), 1)) {
+                int affected = orderItemMapper.updateStatusIfCurrent(item.getId(), 1, 4);
+                if (affected > 0) {
+                    dishMapper.addStock(item.getDishId(), item.getQuantity());
+                }
+            } else if (Objects.equals(item.getStatus(), 0)) {
+                orderItemMapper.updateStatusIfCurrent(item.getId(), 0, 4);
             }
         }
 
@@ -261,15 +349,24 @@ public class OrderService {
         return populateItems(ordersMapper.selectById(orderId));
     }
 
+    private OrderItem resolveCancelItemRace(Integer itemId) {
+        OrderItem latest = orderItemMapper.selectById(itemId);
+        if (latest == null) throw new IllegalArgumentException("Order item does not exist");
+        if (Objects.equals(latest.getStatus(), 4)) {
+            return latest;
+        }
+        throw new IllegalArgumentException("Current item status cannot be cancelled");
+    }
+
     private void validateCreateOrderItems(List<Map<String, Object>> items) {
         if (items == null || items.isEmpty()) {
-            throw new IllegalArgumentException("订单至少需要一个菜品");
+            throw new IllegalArgumentException("Order must contain at least one dish");
         }
     }
 
     private Integer toRequiredInt(Object value, String fieldName) {
         if (!(value instanceof Number)) {
-            throw new IllegalArgumentException(fieldName + "不能为空");
+            throw new IllegalArgumentException(fieldName + " is required");
         }
         return ((Number) value).intValue();
     }
@@ -326,7 +423,7 @@ public class OrderService {
         }
         Map<Integer, TableInfo> tableMap = tableInfoMapper.selectList(
                 new LambdaQueryWrapper<TableInfo>().in(TableInfo::getId, tableIds)
-        ).stream().collect(Collectors.toMap(TableInfo::getId, t -> t));
+        ).stream().collect(Collectors.toMap(TableInfo::getId, table -> table));
         for (Orders order : orders) {
             TableInfo table = tableMap.get(order.getTableId());
             if (table != null) {
@@ -339,37 +436,48 @@ public class OrderService {
     private Orders ensureOrderMutable(Integer orderId) {
         Orders order = ordersMapper.selectById(orderId);
         if (order == null) {
-            throw new IllegalArgumentException("订单不存在");
+            throw new IllegalArgumentException("Order does not exist");
         }
         ensureOrderMutable(order);
         return order;
     }
 
     private void ensureOrderMutable(Orders order) {
-        if (order.getStatus() != null && order.getStatus() == 4) {
-            throw new IllegalArgumentException("已结账订单不允许继续操作");
+        if (isBusyStatus(order.getStatus())) {
+            throw new IllegalArgumentException("Order is being processed, please retry later");
         }
+        if (Objects.equals(order.getStatus(), 4)) {
+            throw new IllegalArgumentException("Settled orders cannot be changed");
+        }
+        if (Objects.equals(order.getStatus(), 5)) {
+            throw new IllegalArgumentException("Cancelled orders cannot be changed");
+        }
+    }
+
+    private boolean isBusyStatus(Integer status) {
+        return status != null && status < 0;
     }
 
     private void refreshOrderStatus(Integer orderId) {
         Orders order = ordersMapper.selectById(orderId);
-        if (order == null || (order.getStatus() != null && order.getStatus() == 4)) {
+        if (order == null || Objects.equals(order.getStatus(), 4)) {
             return;
         }
-        ensureOrderMutable(order);
+
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId)
         );
 
         if (items.isEmpty()) {
             order.setStatus(5);
+            order.setUpdateTime(LocalDateTime.now());
             ordersMapper.updateById(order);
             return;
         }
 
-        long status0 = items.stream().filter(i -> i.getStatus() == 0).count();
-        long status1 = items.stream().filter(i -> i.getStatus() == 1).count();
-        long status2 = items.stream().filter(i -> i.getStatus() == 2).count();
+        long status0 = items.stream().filter(item -> Objects.equals(item.getStatus(), 0)).count();
+        long status1 = items.stream().filter(item -> Objects.equals(item.getStatus(), 1)).count();
+        long status2 = items.stream().filter(item -> Objects.equals(item.getStatus(), 2)).count();
 
         if (status2 == 0 && (status0 + status1) == 0) {
             order.setStatus(5);
@@ -377,7 +485,7 @@ public class OrderService {
             order.setStatus(0);
         } else if (status2 > 0 && status1 > 0) {
             order.setStatus(2);
-        } else if (status2 > 0 && status1 == 0) {
+        } else if (status2 > 0) {
             order.setStatus(3);
         } else if (status1 > 0) {
             order.setStatus(1);
@@ -387,5 +495,15 @@ public class OrderService {
 
         order.setUpdateTime(LocalDateTime.now());
         ordersMapper.updateById(order);
+    }
+
+    private static final class PendingOrderItem {
+        private final Dish dish;
+        private final int quantity;
+
+        private PendingOrderItem(Dish dish, int quantity) {
+            this.dish = dish;
+            this.quantity = quantity;
+        }
     }
 }
