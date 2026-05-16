@@ -36,6 +36,13 @@ public class TableService {
         return tableInfoMapper.selectList(null);
     }
 
+    public TableInfo getById(Integer id) {
+        if (id == null) {
+            return null;
+        }
+        return tableInfoMapper.selectById(id);
+    }
+
     public void add(TableInfo tableInfo) {
         tableInfoMapper.insert(tableInfo);
     }

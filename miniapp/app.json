@@ -1,0 +1,17 @@
+{
+  "pages": [
+    "pages/entry/index",
+    "pages/menu/index",
+    "pages/status/index",
+    "pages/mine/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "铜锅涮肉",
+    "navigationBarBackgroundColor": "#f6efe5",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6efe5",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

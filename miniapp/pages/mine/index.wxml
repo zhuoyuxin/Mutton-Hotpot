@@ -1,0 +1,68 @@
+<view class="page-shell mine-page">
+  <view class="hero-shell">
+    <text class="hero-kicker">Member Center</text>
+    <text class="hero-title">{{isLoggedIn ? (info.name || '铜锅会员') : '未绑定手机号'}}</text>
+    <text class="hero-subtitle">
+      {{isLoggedIn ? maskedPhone : '绑定手机号后可以查看积分、消费和历史订单'}}
+    </text>
+    <button wx:if="{{!isLoggedIn}}" class="chip-button login-chip" bindtap="goEntry">去绑定</button>
+  </view>
+
+  <view wx:if="{{isLoggedIn}}" class="stats-grid">
+    <view class="paper-card stats-card">
+      <text class="stats-label">当前积分</text>
+      <text class="stats-value">{{info.points || 0}}</text>
+    </view>
+    <view class="paper-card stats-card">
+      <text class="stats-label">累计消费</text>
+      <text class="stats-value">¥{{totalSpentText}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!isLoggedIn}}" class="empty-card">
+    <text class="empty-title">当前未登录会员</text>
+    <text>回到入口页填写手机号后，这里会显示积分和消费记录。</text>
+  </view>
+
+  <view wx:else class="paper-card record-panel">
+    <view class="tab-row">
+      <view class="tab-pill {{activeTab === 'orders' ? 'active' : ''}}" data-tab="orders" bindtap="switchTab">
+        消费记录
+      </view>
+      <view class="tab-pill {{activeTab === 'points' ? 'active' : ''}}" data-tab="points" bindtap="switchTab">
+        积分明细
+      </view>
+    </view>
+
+    <view wx:if="{{activeTab === 'orders'}}">
+      <view wx:if="{{!orders.length}}" class="inner-empty">
+        暂无消费记录
+      </view>
+      <view wx:for="{{orders}}" wx:key="id" class="record-item">
+        <view class="record-head">
+          <text class="record-title">{{item.orderNo}}</text>
+          <text class="record-price">¥{{item.totalAmountText}}</text>
+        </view>
+        <text class="record-time">{{item.createTimeText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{activeTab === 'points'}}">
+      <view wx:if="{{!pointsRecords.length}}" class="inner-empty">
+        暂无积分明细
+      </view>
+      <view wx:for="{{pointsRecords}}" wx:key="id" class="record-item">
+        <view class="record-head">
+          <text class="record-title">{{item.remark || '积分变动'}}</text>
+          <text class="record-points {{item.points > 0 ? 'plus' : 'minus'}}">{{item.pointsText}}</text>
+        </view>
+        <text class="record-time">{{item.createTimeText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="fixed-dock">
+    <button class="secondary-button" bindtap="goStatus">上菜进度</button>
+    <button class="primary-button" bindtap="goMenu">继续点餐</button>
+  </view>
+</view>

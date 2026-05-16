@@ -1,0 +1,131 @@
+<view class="page-shell menu-page">
+  <view class="hero-shell">
+    <text class="hero-kicker">Table {{tableInfo.id || tableId}}</text>
+    <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
+    <text class="hero-subtitle">{{tableInfo.area || '堂食点餐'}} · {{maskedPhone}}</text>
+    <view class="hero-actions">
+      <button class="chip-button" bindtap="goStatus">上菜进度</button>
+      <button class="chip-button" bindtap="goMine">会员中心</button>
+    </view>
+  </view>
+
+  <view class="paper-card filter-card">
+    <view class="section-title">
+      <text>今天涮什么</text>
+      <text>{{totalCount ? ('已选 ' + totalCount + ' 份') : '现点现做'}}</text>
+    </view>
+    <input
+      class="copper-input"
+      placeholder="搜索菜品名称"
+      value="{{keyword}}"
+      bindinput="handleKeywordInput"
+    />
+    <scroll-view scroll-x class="category-scroll">
+      <view class="category-list">
+        <view
+          wx:for="{{categories}}"
+          wx:key="id"
+          class="category-pill {{activeCategoryId === item.id ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectCategory"
+        >
+          {{item.name}}
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view wx:if="{{!loading && dishes.length === 0}}" class="empty-card">
+    <text class="empty-title">当前没有可展示的菜品</text>
+    <text>换个分类或者搜索词试试看。</text>
+  </view>
+
+  <view wx:else class="dish-list">
+    <view wx:for="{{dishes}}" wx:key="id" class="paper-card dish-card">
+      <image wx:if="{{item.image}}" class="dish-image" src="{{item.image}}" mode="aspectFill"></image>
+      <view class="dish-body {{!item.image ? 'full' : ''}}">
+        <view class="dish-head">
+          <text class="dish-name">{{item.name}}</text>
+          <text class="dish-stock">{{item.stock > 0 ? ('余量 ' + item.stock) : '已售罄'}}</text>
+        </view>
+        <text class="dish-desc">{{item.description || '铜锅现切，现点现做。'}}</text>
+        <view class="dish-foot">
+          <text class="dish-price">¥{{item.priceText}}</text>
+          <view class="stepper">
+            <button
+              wx:if="{{item.cartQty > 0}}"
+              class="stepper-button subtle"
+              data-id="{{item.id}}"
+              data-delta="-1"
+              bindtap="changeQty"
+            >
+              -
+            </button>
+            <text wx:if="{{item.cartQty > 0}}" class="stepper-count">{{item.cartQty}}</text>
+            <button
+              class="stepper-button"
+              data-id="{{item.id}}"
+              data-delta="1"
+              bindtap="changeQty"
+              disabled="{{item.stock <= item.cartQty}}"
+            >
+              +
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="cart-bar">
+    <view class="cart-summary" bindtap="toggleCart">
+      <view class="cart-badge {{totalCount ? 'visible' : ''}}">{{totalCount}}</view>
+      <view class="cart-copy">
+        <text class="cart-total">¥{{totalPrice}}</text>
+        <text class="cart-hint">{{totalCount ? '点击查看已选菜品' : '先挑几样招牌和热菜'}}</text>
+      </view>
+    </view>
+    <button class="secondary-button compact" bindtap="goStatus">进度</button>
+    <button class="primary-button compact" loading="{{submitting}}" disabled="{{totalCount === 0}}" bindtap="submitOrder">
+      提交下单
+    </button>
+  </view>
+
+  <view wx:if="{{showCart}}" class="overlay-mask" bindtap="closeCart"></view>
+  <view wx:if="{{showCart}}" class="cart-sheet">
+    <view class="sheet-handle"></view>
+    <view class="section-title">
+      <text>已选菜品</text>
+      <text>{{totalCount}} 份 · ¥{{totalPrice}}</text>
+    </view>
+
+    <scroll-view scroll-y class="cart-scroll">
+      <view wx:for="{{cartItems}}" wx:key="id" class="cart-item">
+        <view class="cart-item-main">
+          <text class="cart-item-name">{{item.name}}</text>
+          <text class="cart-item-price">¥{{item.subtotalText}}</text>
+        </view>
+        <view class="cart-item-actions">
+          <button class="stepper-button subtle" data-id="{{item.id}}" data-delta="-1" bindtap="changeQty">-</button>
+          <text class="stepper-count">{{item.qty}}</text>
+          <button class="stepper-button" data-id="{{item.id}}" data-delta="1" bindtap="changeQty">+</button>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="field-block">
+      <text class="field-label">备注</text>
+      <textarea
+        class="copper-textarea"
+        maxlength="100"
+        placeholder="例如：少辣、先上涮品、不要香菜"
+        value="{{remark}}"
+        bindinput="handleRemarkInput"
+      ></textarea>
+    </view>
+
+    <button class="primary-button" loading="{{submitting}}" bindtap="submitOrder">
+      确认下单
+    </button>
+  </view>
+</view>

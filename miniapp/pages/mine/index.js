@@ -1,0 +1,123 @@
+const { customerInfo, customerOrders, customerPoints } = require('../../api/customer')
+const { extractTableId } = require('../../utils/navigation')
+const { formatPrice, maskPhone, formatDateTime } = require('../../utils/format')
+
+Page({
+  data: {
+    tableId: '',
+    loading: false,
+    isLoggedIn: false,
+    info: null,
+    maskedPhone: '',
+    totalSpentText: '0.00',
+    orders: [],
+    pointsRecords: [],
+    activeTab: 'orders'
+  },
+
+  onLoad(options) {
+    const tableId = extractTableId(options) || Number(wx.getStorageSync('currentTableId') || 0)
+    if (tableId) {
+      wx.setStorageSync('currentTableId', tableId)
+      this.setData({ tableId: String(tableId) })
+    }
+  },
+
+  onShow() {
+    this.loadData()
+  },
+
+  onPullDownRefresh() {
+    this.loadData().finally(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  async loadData() {
+    const phone = wx.getStorageSync('customerPhone')
+    if (!phone) {
+      this.setData({
+        isLoggedIn: false,
+        info: null,
+        maskedPhone: '',
+        totalSpentText: '0.00',
+        orders: [],
+        pointsRecords: []
+      })
+      return
+    }
+
+    this.setData({ loading: true })
+    try {
+      const [infoResult, ordersResult, pointsResult] = await Promise.allSettled([
+        customerInfo(),
+        customerOrders(),
+        customerPoints()
+      ])
+
+      const info = infoResult.status === 'fulfilled' ? infoResult.value : null
+      const orderList = ordersResult.status === 'fulfilled' ? ordersResult.value : []
+      const pointList = pointsResult.status === 'fulfilled' ? pointsResult.value : []
+
+      if (!info) {
+        this.setData({
+          isLoggedIn: false,
+          info: null,
+          maskedPhone: '',
+          totalSpentText: '0.00',
+          orders: [],
+          pointsRecords: []
+        })
+        return
+      }
+
+      this.setData({
+        isLoggedIn: true,
+        info,
+        maskedPhone: maskPhone(info.phone),
+        totalSpentText: formatPrice(info.totalSpent),
+        orders: orderList.map((order) => ({
+          ...order,
+          totalAmountText: formatPrice(order.totalAmount),
+          createTimeText: formatDateTime(order.createTime)
+        })),
+        pointsRecords: pointList.map((record) => ({
+          ...record,
+          pointsText: `${record.points > 0 ? '+' : ''}${record.points}`,
+          createTimeText: formatDateTime(record.createTime)
+        }))
+      })
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+
+  switchTab(event) {
+    const activeTab = event.currentTarget.dataset.tab
+    this.setData({ activeTab })
+  },
+
+  goEntry() {
+    const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
+    const url = tableId ? `/pages/entry/index?tableId=${tableId}` : '/pages/entry/index'
+    wx.redirectTo({ url })
+  },
+
+  goMenu() {
+    const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
+    if (!tableId) {
+      wx.redirectTo({ url: '/pages/entry/index' })
+      return
+    }
+    wx.redirectTo({ url: `/pages/menu/index?tableId=${tableId}` })
+  },
+
+  goStatus() {
+    const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
+    if (!tableId) {
+      wx.redirectTo({ url: '/pages/entry/index' })
+      return
+    }
+    wx.redirectTo({ url: `/pages/status/index?tableId=${tableId}` })
+  }
+})

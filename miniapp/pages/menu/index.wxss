@@ -1,0 +1,271 @@
+.menu-page {
+  padding-bottom: calc(220rpx + env(safe-area-inset-bottom));
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.filter-card {
+  margin-bottom: 22rpx;
+  padding: 26rpx;
+}
+
+.category-scroll {
+  width: 100%;
+  margin-top: 18rpx;
+  white-space: nowrap;
+}
+
+.category-list {
+  display: inline-flex;
+  gap: 14rpx;
+  padding-right: 12rpx;
+}
+
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 68rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: rgba(142, 92, 56, 0.08);
+  color: #7d5641;
+  font-size: 24rpx;
+  white-space: nowrap;
+}
+
+.category-pill.active {
+  background: linear-gradient(135deg, #a84329, #d98a4a);
+  color: #fff6eb;
+  box-shadow: 0 12rpx 26rpx rgba(168, 67, 41, 0.18);
+}
+
+.dish-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.dish-card {
+  overflow: hidden;
+}
+
+.dish-image {
+  width: 100%;
+  height: 280rpx;
+}
+
+.dish-body {
+  padding: 24rpx;
+}
+
+.dish-body.full {
+  padding-top: 28rpx;
+}
+
+.dish-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  align-items: flex-start;
+}
+
+.dish-name {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #241513;
+}
+
+.dish-stock {
+  font-size: 22rpx;
+  color: #9a7561;
+}
+
+.dish-desc {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #856758;
+}
+
+.dish-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.dish-price {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #ab4528;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.stepper-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ad4629, #d78949);
+  color: #fff6eb;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.stepper-button[disabled] {
+  opacity: 0.38;
+}
+
+.stepper-button.subtle {
+  background: rgba(125, 86, 65, 0.12);
+  color: #77482f;
+}
+
+.stepper-count {
+  min-width: 30rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #33201b;
+}
+
+.cart-bar {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(20rpx + env(safe-area-inset-bottom));
+  z-index: 28;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 18rpx;
+  border-radius: 32rpx;
+  background: rgba(33, 17, 14, 0.92);
+  box-shadow: 0 18rpx 48rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(16rpx);
+}
+
+.cart-summary {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 18rpx;
+}
+
+.cart-badge {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: transparent;
+  font-size: 24rpx;
+  font-weight: 700;
+  text-align: center;
+  line-height: 52rpx;
+}
+
+.cart-badge.visible {
+  background: linear-gradient(135deg, #d56c3e, #f2b166);
+  color: #3b1d12;
+}
+
+.cart-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.cart-total {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #fff3e3;
+}
+
+.cart-hint {
+  font-size: 22rpx;
+  color: rgba(255, 238, 223, 0.68);
+}
+
+.compact {
+  flex: 0 0 168rpx;
+  min-height: 84rpx;
+}
+
+.overlay-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.cart-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 18rpx 24rpx calc(30rpx + env(safe-area-inset-bottom));
+  border-radius: 36rpx 36rpx 0 0;
+  background: #fbf3e9;
+  box-shadow: 0 -14rpx 40rpx rgba(22, 12, 9, 0.14);
+}
+
+.sheet-handle {
+  width: 96rpx;
+  height: 10rpx;
+  margin: 0 auto 18rpx;
+  border-radius: 999rpx;
+  background: rgba(130, 87, 61, 0.22);
+}
+
+.cart-scroll {
+  max-height: 420rpx;
+  margin-bottom: 20rpx;
+}
+
+.cart-item {
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid rgba(169, 120, 83, 0.12);
+}
+
+.cart-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.cart-item-name {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2e1b18;
+}
+
+.cart-item-price {
+  font-size: 24rpx;
+  color: #9f5a34;
+}
+
+.cart-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}

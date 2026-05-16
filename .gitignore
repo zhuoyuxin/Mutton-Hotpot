@@ -31,3 +31,7 @@ uploads/
 *~
 # 前端构建产物（每次编译都会变化，不纳入版本控制）
 backend/src/main/resources/static/
+miniapp/node_modules/
+miniapp/miniprogram_npm/
+miniapp/dist/
+miniapp/project.private.config.json

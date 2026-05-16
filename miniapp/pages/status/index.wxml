@@ -1,0 +1,58 @@
+<view class="page-shell status-page">
+  <view class="hero-shell">
+    <text class="hero-kicker">Kitchen Live Board</text>
+    <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
+    <text class="hero-subtitle">
+      {{tableInfo.area || '堂食区域'}} · 每 10 秒自动刷新一次
+    </text>
+    <view class="hero-meta">
+      <text>当前订单 {{totalOrders}}</text>
+      <text>最后刷新 {{lastUpdatedAt}}</text>
+    </view>
+  </view>
+
+  <view class="summary-grid">
+    <view class="paper-card summary-card">
+      <text class="summary-label">当前订单</text>
+      <text class="summary-value">{{totalOrders}}</text>
+    </view>
+    <view class="paper-card summary-card">
+      <text class="summary-label">待上菜</text>
+      <text class="summary-value">{{pendingItems}}</text>
+    </view>
+    <view class="paper-card summary-card">
+      <text class="summary-label">已上菜</text>
+      <text class="summary-value">{{servedItems}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!orders.length}}" class="empty-card">
+    <text class="empty-title">当前还没有订单</text>
+    <text>回到菜单页继续点餐，厨房状态会在这里自动更新。</text>
+  </view>
+
+  <view wx:else class="order-list">
+    <view wx:for="{{orders}}" wx:key="id" class="paper-card order-card">
+      <view class="order-head">
+        <view class="order-copy">
+          <text class="order-no">{{item.orderNo}}</text>
+          <text class="order-time">{{item.createTimeText}}</text>
+        </view>
+        <text class="badge {{item.statusClass}}">{{item.statusText}}</text>
+      </view>
+
+      <view wx:for="{{item.items}}" wx:key="id" class="dish-row">
+        <view class="dish-row-main">
+          <text class="dish-row-name">{{item.dishName}}</text>
+          <text class="dish-row-qty">x{{item.quantity}}</text>
+        </view>
+        <text class="badge {{item.statusClass}} small">{{item.statusText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="fixed-dock">
+    <button class="secondary-button" bindtap="goMine">会员中心</button>
+    <button class="primary-button" bindtap="goMenu">继续点餐</button>
+  </view>
+</view>

@@ -1,0 +1,115 @@
+.mine-page {
+  padding-bottom: calc(206rpx + env(safe-area-inset-bottom));
+}
+
+.login-chip {
+  margin-top: 24rpx;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+  margin-bottom: 22rpx;
+}
+
+.stats-card {
+  padding: 26rpx 24rpx;
+}
+
+.stats-label {
+  display: block;
+  font-size: 22rpx;
+  color: #8b6d5d;
+}
+
+.stats-value {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #281815;
+}
+
+.record-panel {
+  padding: 20rpx 24rpx;
+}
+
+.tab-row {
+  display: flex;
+  gap: 14rpx;
+  margin-bottom: 16rpx;
+}
+
+.tab-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 68rpx;
+  padding: 0 26rpx;
+  border-radius: 999rpx;
+  background: rgba(140, 95, 62, 0.08);
+  color: #7f5944;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.tab-pill.active {
+  background: linear-gradient(135deg, #a84329, #d98a4a);
+  color: #fff5ea;
+}
+
+.inner-empty {
+  padding: 46rpx 0;
+  text-align: center;
+  color: #8a6d5f;
+  font-size: 24rpx;
+}
+
+.record-item + .record-item {
+  border-top: 1rpx solid rgba(164, 119, 87, 0.12);
+}
+
+.record-item {
+  padding: 20rpx 0;
+}
+
+.record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.record-title {
+  flex: 1;
+  font-size: 28rpx;
+  color: #2e1c19;
+  word-break: break-all;
+}
+
+.record-price {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #ab4528;
+}
+
+.record-points {
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.record-points.plus {
+  color: #2f7a47;
+}
+
+.record-points.minus {
+  color: #9f4037;
+}
+
+.record-time {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #8b6d5d;
+}
