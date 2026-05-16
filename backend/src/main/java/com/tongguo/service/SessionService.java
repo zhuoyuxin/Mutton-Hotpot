@@ -2,6 +2,7 @@ package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tongguo.dto.CheckoutHistoryDTO;
+import com.tongguo.dto.CustomerConsumptionDTO;
 import com.tongguo.dto.DishSummaryDTO;
 import com.tongguo.dto.SessionDetailDTO;
 import com.tongguo.entity.Customer;
@@ -350,6 +351,102 @@ public class SessionService {
             result.add(dto);
         }
         return result;
+    }
+
+    public List<CustomerConsumptionDTO> getCustomerConsumptionRecords(Integer customerId) {
+        List<SessionCheckout> checkouts = checkoutMapper.selectList(
+                new LambdaQueryWrapper<SessionCheckout>()
+                        .eq(SessionCheckout::getCustomerId, customerId)
+                        .orderByDesc(SessionCheckout::getCheckoutTime)
+        );
+        if (checkouts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Integer> sessionIds = checkouts.stream()
+                .map(SessionCheckout::getSessionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Integer, DiningSession> sessionMap = new HashMap<>();
+        Map<Integer, TableInfo> tableMap = new HashMap<>();
+        if (!sessionIds.isEmpty()) {
+            List<DiningSession> sessions = sessionMapper.selectList(
+                    new LambdaQueryWrapper<DiningSession>().in(DiningSession::getId, sessionIds)
+            );
+            sessionMap = sessions.stream()
+                    .collect(Collectors.toMap(DiningSession::getId, session -> session));
+
+            Set<Integer> tableIds = sessions.stream()
+                    .map(DiningSession::getTableId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (!tableIds.isEmpty()) {
+                tableMap = tableInfoMapper.selectList(
+                        new LambdaQueryWrapper<TableInfo>().in(TableInfo::getId, tableIds)
+                ).stream().collect(Collectors.toMap(TableInfo::getId, table -> table));
+            }
+        }
+
+        List<Orders> orders = sessionIds.isEmpty()
+                ? Collections.emptyList()
+                : ordersMapper.selectList(
+                new LambdaQueryWrapper<Orders>()
+                        .in(Orders::getSessionId, sessionIds)
+                        .eq(Orders::getCustomerId, customerId)
+                        .orderByAsc(Orders::getCreateTime)
+        );
+        Map<Integer, List<Orders>> ordersBySessionId = orders.stream()
+                .collect(Collectors.groupingBy(Orders::getSessionId, LinkedHashMap::new, Collectors.toList()));
+
+        List<Integer> orderIds = orders.stream()
+                .map(Orders::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        List<OrderItem> orderItems = orderIds.isEmpty()
+                ? Collections.emptyList()
+                : orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>()
+                        .in(OrderItem::getOrderId, orderIds)
+                        .in(OrderItem::getStatus, 1, 2)
+        );
+        Map<Integer, List<OrderItem>> itemsByOrderId = orderItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
+
+        List<CustomerConsumptionDTO> records = new ArrayList<>();
+        for (SessionCheckout checkout : checkouts) {
+            CustomerConsumptionDTO dto = new CustomerConsumptionDTO();
+            dto.setCheckoutId(checkout.getId());
+            dto.setSessionId(checkout.getSessionId());
+            dto.setTotalAmount(checkout.getTotalAmount());
+            dto.setActualPaid(checkout.getActualPaid());
+            dto.setDiscountAmount(checkout.getDiscountAmount());
+            dto.setPointsEarned(checkout.getPointsEarned());
+            dto.setCheckoutTime(checkout.getCheckoutTime());
+
+            DiningSession session = sessionMap.get(checkout.getSessionId());
+            if (session != null && session.getTableId() != null) {
+                TableInfo table = tableMap.get(session.getTableId());
+                if (table != null) {
+                    dto.setTableName(table.getName());
+                    dto.setTableArea(table.getArea());
+                }
+            }
+
+            List<Orders> sessionOrders = new ArrayList<>(ordersBySessionId.getOrDefault(checkout.getSessionId(), Collections.emptyList()));
+            for (Orders order : sessionOrders) {
+                order.setItems(itemsByOrderId.getOrDefault(order.getId(), Collections.emptyList()));
+            }
+            dto.setOrders(sessionOrders);
+            dto.setOrderCount(sessionOrders.size());
+
+            List<OrderItem> consumedItems = sessionOrders.stream()
+                    .flatMap(order -> order.getItems().stream())
+                    .collect(Collectors.toList());
+            dto.setDishSummary(buildDishSummary(consumedItems));
+            records.add(dto);
+        }
+        return records;
     }
 
     private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {

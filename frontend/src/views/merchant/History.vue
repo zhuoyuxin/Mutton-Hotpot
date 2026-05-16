@@ -2,12 +2,18 @@
   <div v-loading="loading">
     <el-card>
       <template #header>
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <div class="toolbar">
           <span>结账历史</span>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-            <el-date-picker v-model="dateRange" type="daterange" range-separator="至"
-              start-placeholder="开始日期" end-placeholder="结束日期"
-              value-format="YYYY-MM-DD" style="max-width:280px" />
+          <div class="filters">
+            <el-date-picker
+              v-model="dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="YYYY-MM-DD"
+              style="max-width: 280px"
+            />
             <el-button type="primary" @click="loadHistory">查询</el-button>
           </div>
         </div>
@@ -15,8 +21,8 @@
 
       <div class="table-scroll">
         <el-table :data="records" size="small">
-          <el-table-column label="结账时间" width="160">
-            <template #default="{ row }">{{ row.checkoutTime }}</template>
+          <el-table-column label="结账时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.checkoutTime) }}</template>
           </el-table-column>
           <el-table-column label="桌台" width="100">
             <template #default="{ row }">{{ row.tableName || '散客' }}</template>
@@ -35,13 +41,14 @@
           </el-table-column>
         </el-table>
       </div>
+
       <el-empty v-if="!loading && records.length === 0" description="暂无结账记录" />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { history } from '../../api/session'
 import { formatPrice } from '../../utils/format'
@@ -49,6 +56,13 @@ import { formatPrice } from '../../utils/format'
 const loading = ref(false)
 const records = ref([])
 const dateRange = ref(null)
+
+const formatDateTime = (value) => {
+  if (!value) {
+    return '-'
+  }
+  return String(value).replace('T', ' ').split('.')[0]
+}
 
 const loadHistory = async () => {
   loading.value = true
@@ -59,7 +73,7 @@ const loadHistory = async () => {
       params.endDate = dateRange.value[1]
     }
     const res = await history(params)
-    records.value = res.data
+    records.value = res.data || []
   } catch (e) {
     ElMessage.error('加载结账历史失败')
   } finally {
@@ -71,6 +85,21 @@ onMounted(loadHistory)
 </script>
 
 <style scoped>
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .table-scroll {
   overflow-x: auto;
 }

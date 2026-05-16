@@ -12,4 +12,5 @@ public class CustomerDetailDTO {
     private Customer customer;
     private List<PointsRecord> pointsRecords;
     private List<Orders> orders;
+    private List<CustomerConsumptionDTO> consumptionRecords;
 }

@@ -8,6 +8,7 @@ import com.tongguo.entity.Orders;
 import com.tongguo.entity.PointsRecord;
 import com.tongguo.service.CustomerService;
 import com.tongguo.service.OrderService;
+import com.tongguo.service.SessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +30,9 @@ public class CustomerController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private SessionService sessionService;
 
     @PostMapping("/api/c/auth/login")
     public Result<CustomerInfoDTO> customerLogin(@RequestBody Map<String, String> params) {
@@ -103,6 +107,7 @@ public class CustomerController {
         dto.setCustomer(customer);
         dto.setPointsRecords(records);
         dto.setOrders(orders);
+        dto.setConsumptionRecords(sessionService.getCustomerConsumptionRecords(id));
         return Result.ok(dto);
     }
 
