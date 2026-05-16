@@ -15,6 +15,19 @@ public interface OrderItemMapper extends BaseMapper<OrderItem> {
                               @Param("fromStatus") Integer fromStatus,
                               @Param("toStatus") Integer toStatus);
 
+    @Update("UPDATE order_item SET status = #{toStatus} " +
+            "WHERE id = #{id} AND status = #{fromStatus} AND quantity = #{expectedQuantity}")
+    int updateStatusIfCurrentAndQuantity(@Param("id") Integer id,
+                                         @Param("fromStatus") Integer fromStatus,
+                                         @Param("toStatus") Integer toStatus,
+                                         @Param("expectedQuantity") Integer expectedQuantity);
+
+    @Update("UPDATE order_item SET quantity = quantity - #{servedQuantity} " +
+            "WHERE id = #{id} AND status = 1 AND quantity = #{expectedQuantity} AND quantity > #{servedQuantity}")
+    int deductWaitingQuantity(@Param("id") Integer id,
+                              @Param("expectedQuantity") Integer expectedQuantity,
+                              @Param("servedQuantity") Integer servedQuantity);
+
     @Select("SELECT COALESCE(SUM(quantity), 0) FROM order_item WHERE dish_id = #{dishId} AND status = 0")
     Integer sumPendingQuantityByDishId(@Param("dishId") Integer dishId);
 }

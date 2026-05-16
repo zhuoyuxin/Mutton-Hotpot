@@ -251,7 +251,7 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderItem serveItem(Integer itemId) {
+    public OrderItem serveItem(Integer itemId, Integer serveQuantity, Integer expectedQuantity) {
         OrderItem item = orderItemMapper.selectById(itemId);
         if (item == null) throw new IllegalArgumentException("Order item does not exist");
 
@@ -263,18 +263,31 @@ public class OrderService {
             throw new IllegalArgumentException("Only waiting items can be served");
         }
 
-        int affected = orderItemMapper.updateStatusIfCurrent(itemId, 1, 2);
-        if (affected == 0) {
-            OrderItem latest = orderItemMapper.selectById(itemId);
-            if (latest == null) throw new IllegalArgumentException("Order item does not exist");
-            if (Objects.equals(latest.getStatus(), 2)) {
-                return latest;
+        int currentQuantity = requirePositiveQuantity(item.getQuantity(), "Order item quantity is invalid");
+        int normalizedServeQuantity = serveQuantity == null ? currentQuantity : serveQuantity;
+        if (normalizedServeQuantity <= 0) {
+            throw new IllegalArgumentException("Serve quantity must be greater than 0");
+        }
+        if (normalizedServeQuantity > currentQuantity) {
+            throw new IllegalArgumentException("Serve quantity cannot exceed waiting quantity");
+        }
+
+        OrderItem result;
+        if (normalizedServeQuantity == currentQuantity) {
+            int affected = expectedQuantity == null
+                    ? orderItemMapper.updateStatusIfCurrent(itemId, 1, 2)
+                    : orderItemMapper.updateStatusIfCurrentAndQuantity(itemId, 1, 2, expectedQuantity);
+            if (affected == 0) {
+                result = resolveServeItemRace(itemId, expectedQuantity);
+            } else {
+                result = orderItemMapper.selectById(itemId);
             }
-            throw new IllegalArgumentException("Only waiting items can be served");
+        } else {
+            result = servePartialItem(item, normalizedServeQuantity, expectedQuantity);
         }
 
         refreshOrderStatus(item.getOrderId());
-        return orderItemMapper.selectById(itemId);
+        return result;
     }
 
     @Transactional
@@ -358,6 +371,40 @@ public class OrderService {
         throw new IllegalArgumentException("Current item status cannot be cancelled");
     }
 
+    private OrderItem servePartialItem(OrderItem item, int serveQuantity, Integer expectedQuantity) {
+        int compareQuantity = expectedQuantity != null ? expectedQuantity
+                : requirePositiveQuantity(item.getQuantity(), "Order item quantity is invalid");
+        int affected = orderItemMapper.deductWaitingQuantity(item.getId(), compareQuantity, serveQuantity);
+        if (affected == 0) {
+            return resolveServeItemRace(item.getId(), compareQuantity);
+        }
+
+        OrderItem servedItem = new OrderItem();
+        servedItem.setOrderId(item.getOrderId());
+        servedItem.setDishId(item.getDishId());
+        servedItem.setDishName(item.getDishName());
+        servedItem.setDishPrice(item.getDishPrice());
+        servedItem.setQuantity(serveQuantity);
+        servedItem.setStatus(2);
+        orderItemMapper.insert(servedItem);
+        return servedItem;
+    }
+
+    private OrderItem resolveServeItemRace(Integer itemId, Integer expectedQuantity) {
+        OrderItem latest = orderItemMapper.selectById(itemId);
+        if (latest == null) {
+            throw new IllegalArgumentException("Order item does not exist");
+        }
+        if (Objects.equals(latest.getStatus(), 2)) {
+            return latest;
+        }
+        if (Objects.equals(latest.getStatus(), 1) && expectedQuantity != null
+                && !Objects.equals(latest.getQuantity(), expectedQuantity)) {
+            throw new IllegalArgumentException("Order item quantity has changed, please refresh and retry");
+        }
+        throw new IllegalArgumentException("Only waiting items can be served");
+    }
+
     private void validateCreateOrderItems(List<Map<String, Object>> items) {
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("Order must contain at least one dish");
@@ -369,6 +416,13 @@ public class OrderService {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         return ((Number) value).intValue();
+    }
+
+    private int requirePositiveQuantity(Integer quantity, String errorMsg) {
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException(errorMsg);
+        }
+        return quantity;
     }
 
     private LocalDate parseDateOrThrow(String dateStr, String errorMsg) {

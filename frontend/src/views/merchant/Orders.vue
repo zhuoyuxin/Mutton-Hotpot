@@ -28,7 +28,6 @@
             </div>
           </template>
 
-          <!-- 操作按钮 -->
           <div style="margin-bottom:10px">
             <el-button v-if="order.status === 0" type="primary" size="small" @click="handleConfirm(order.id)">
               确认订单
@@ -38,7 +37,6 @@
             </el-button>
           </div>
 
-          <!-- 菜品列表 -->
           <div class="table-scroll">
             <el-table :data="order.items" size="small">
               <el-table-column prop="dishName" label="菜品" />
@@ -51,9 +49,9 @@
                   <el-tag size="small" :type="itemStatusType(row.status)">{{ itemStatusText(row.status) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="140">
+              <el-table-column label="操作" width="160">
                 <template #default="{ row }">
-                  <el-button v-if="row.status === 1" size="small" text type="success" @click="handleServe(row.id)">
+                  <el-button v-if="row.status === 1" size="small" text type="success" @click="openServeDialog(order, row)">
                     上菜
                   </el-button>
                   <el-button v-if="row.status === 0 || row.status === 1" size="small" text type="danger" @click="handleCancelItem(row.id)">
@@ -65,6 +63,7 @@
           </div>
         </el-collapse-item>
       </el-collapse>
+
       <el-empty v-if="!loading && orders.length === 0" description="暂无订单" />
       <el-pagination
         v-if="orders.length > 0"
@@ -76,15 +75,23 @@
         @current-change="(val) => currentPage = val"
       />
     </el-card>
+
+    <ServeItemsDialog
+      v-model:visible="showServeDialog"
+      :order="servingOrder"
+      :filter-item-id="servingItemId"
+      @served="loadOrders"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { merchantList, confirm, serveItem, cancelItem, cancelOrder } from '../../api/order'
+import { merchantList, confirm, cancelItem, cancelOrder } from '../../api/order'
 import { list as listTables } from '../../api/table'
 import { orderStatusText as statusText, itemStatusText, itemStatusType } from '../../utils/orderStatus'
+import ServeItemsDialog from '../../components/ServeItemsDialog.vue'
 
 const loading = ref(false)
 const orders = ref([])
@@ -94,8 +101,13 @@ const filterTableId = ref(null)
 const expandedOrders = ref([])
 const currentPage = ref(1)
 const pageSize = ref(10)
+const showServeDialog = ref(false)
+const servingOrder = ref(null)
+const servingItemId = ref(null)
 
-const pagedOrders = computed(() => orders.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value))
+const pagedOrders = computed(() =>
+  orders.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value)
+)
 
 const loadOrders = async () => {
   loading.value = true
@@ -114,7 +126,9 @@ const loadTables = async () => {
   try {
     const res = await listTables()
     tableList.value = res.data
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    // ignore
+  }
 }
 
 const handleConfirm = async (id) => {
@@ -127,32 +141,32 @@ const handleConfirm = async (id) => {
   }
 }
 
-const handleServe = async (itemId) => {
-  try {
-    await serveItem(itemId)
-    ElMessage.success('已上菜')
-    loadOrders()
-  } catch (e) {
-    ElMessage.error('上菜操作失败')
-  }
+const openServeDialog = (order, item) => {
+  servingOrder.value = order
+  servingItemId.value = item.id
+  showServeDialog.value = true
 }
 
 const handleCancelItem = async (itemId) => {
   try {
-    await ElMessageBox.confirm('确定退该菜品？', '提示')
+    await ElMessageBox.confirm('确定退这道菜品吗？', '提示')
     await cancelItem(itemId)
     ElMessage.success('已退菜')
     loadOrders()
-  } catch (e) { /* 取消 */ }
+  } catch (e) {
+    // cancel
+  }
 }
 
 const handleCancel = async (orderId) => {
   try {
-    await ElMessageBox.confirm('确定取消整单？', '提示')
+    await ElMessageBox.confirm('确定取消整单吗？', '提示')
     await cancelOrder(orderId)
     ElMessage.success('订单已取消')
     loadOrders()
-  } catch (e) { /* 取消 */ }
+  } catch (e) {
+    // cancel
+  }
 }
 
 onMounted(() => {

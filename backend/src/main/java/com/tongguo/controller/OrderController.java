@@ -88,9 +88,12 @@ public class OrderController {
     }
 
     @PutMapping("/api/m/order/serve-item/{id}")
-    public Result<OrderItem> serveItem(@PathVariable Integer id) {
+    public Result<OrderItem> serveItem(@PathVariable Integer id,
+                                       @RequestBody(required = false) Map<String, Object> params) {
         try {
-            return Result.ok(orderService.serveItem(id));
+            Integer quantity = params == null ? null : toInt(params.get("quantity"));
+            Integer expectedQuantity = params == null ? null : toInt(params.get("expectedQuantity"));
+            return Result.ok(orderService.serveItem(id, quantity, expectedQuantity));
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }
@@ -116,7 +119,14 @@ public class OrderController {
 
     private Integer toInt(Object obj) {
         if (obj == null) return null;
-        return ((Number) obj).intValue();
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+        try {
+            return Integer.parseInt(obj.toString().trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid integer parameter");
+        }
     }
 
     private String extractPhone(String phoneHeader) {

@@ -23,7 +23,6 @@
       </el-col>
     </el-row>
 
-    <!-- 待处理订单 -->
     <el-card style="margin-top:20px">
       <template #header>
         <span>待处理订单</span>
@@ -47,16 +46,38 @@
           <el-table-column label="时间" width="160">
             <template #default="{ row }">{{ row.createTime }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="160">
+          <el-table-column label="操作" width="180">
             <template #default="{ row }">
-              <el-button v-if="row.status === 0" type="primary" size="small" text @click="handleConfirm(row.id)">确认</el-button>
-              <el-button v-if="getFirstPendingItem(row)" type="success" size="small" text @click="handleServe(getFirstPendingItem(row).id)">上菜</el-button>
+              <el-button
+                v-if="row.status === 0"
+                type="primary"
+                size="small"
+                text
+                @click="handleConfirm(row.id)"
+              >
+                确认
+              </el-button>
+              <el-button
+                v-if="hasPendingServeItems(row)"
+                type="success"
+                size="small"
+                text
+                @click="openServeDialog(row)"
+              >
+                上菜
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
       <el-empty v-if="!pendingLoading && pendingOrders.length === 0" description="暂无待处理订单" :image-size="60" />
     </el-card>
+
+    <ServeItemsDialog
+      v-model:visible="showServeDialog"
+      :order="servingOrder"
+      @served="refreshAll"
+    />
   </div>
 </template>
 
@@ -64,14 +85,17 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getData } from '../../api/dashboard'
-import { merchantList, confirm, serveItem } from '../../api/order'
+import { merchantList, confirm } from '../../api/order'
 import { orderStatusText, orderStatusType } from '../../utils/orderStatus'
+import ServeItemsDialog from '../../components/ServeItemsDialog.vue'
 
 const data = ref({})
 const loading = ref(false)
 const timer = ref(null)
 const pendingOrders = ref([])
 const pendingLoading = ref(false)
+const showServeDialog = ref(false)
+const servingOrder = ref(null)
 
 const loadData = async () => {
   loading.value = true
@@ -104,13 +128,18 @@ const refreshAll = () => {
 
 const dishSummary = (order) => {
   if (!order.items || order.items.length === 0) return '-'
-  const names = order.items.map(i => i.dishName + 'x' + i.quantity)
-  return names.join('、')
+  const summaryMap = new Map()
+  order.items.forEach((item) => {
+    summaryMap.set(item.dishName, (summaryMap.get(item.dishName) || 0) + item.quantity)
+  })
+  return Array.from(summaryMap.entries())
+    .map(([name, quantity]) => `${name}x${quantity}`)
+    .join('、')
 }
 
-const getFirstPendingItem = (order) => {
-  if (!order.items) return null
-  return order.items.find(i => i.status === 1) || null
+const hasPendingServeItems = (order) => {
+  if (!order.items) return false
+  return order.items.some((item) => item.status === 1)
 }
 
 const handleConfirm = async (id) => {
@@ -123,14 +152,9 @@ const handleConfirm = async (id) => {
   }
 }
 
-const handleServe = async (itemId) => {
-  try {
-    await serveItem(itemId)
-    ElMessage.success('已上菜')
-    refreshAll()
-  } catch (e) {
-    ElMessage.error('上菜操作失败')
-  }
+const openServeDialog = (order) => {
+  servingOrder.value = order
+  showServeDialog.value = true
 }
 
 const handleVisibilityChange = () => {
@@ -154,3 +178,9 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
+
+<style scoped>
+.table-scroll {
+  overflow-x: auto;
+}
+</style>
