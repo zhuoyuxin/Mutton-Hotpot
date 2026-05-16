@@ -1,6 +1,8 @@
 package com.tongguo.controller;
 
 import com.tongguo.config.Result;
+import com.tongguo.dto.request.CreateOrderRequest;
+import com.tongguo.dto.request.ServeItemRequest;
 import com.tongguo.entity.OrderItem;
 import com.tongguo.entity.Orders;
 import com.tongguo.service.OrderService;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class OrderController {
@@ -24,18 +25,18 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/api/c/order/create")
-    public Result<Orders> customerCreate(@RequestBody Map<String, Object> params,
+    public Result<Orders> customerCreate(@RequestBody CreateOrderRequest request,
                                          @RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         try {
             String phoneFromHeader = extractPhone(phoneHeader);
-            String phoneFromBody = (String) params.get("phone");
+            String phoneFromBody = request.getPhone();
             String phone = phoneFromHeader != null ? phoneFromHeader : phoneFromBody;
             Orders order = orderService.createOrder(
-                    toInt(params.get("tableId")),
+                    request.getTableId(),
                     null,
-                    (List<Map<String, Object>>) params.get("items"),
+                    request.getItems(),
                     phone,
-                    (String) params.get("remark")
+                    request.getRemark()
             );
             return Result.ok(order);
         } catch (Exception e) {
@@ -58,14 +59,14 @@ public class OrderController {
     }
 
     @PostMapping("/api/m/order/create")
-    public Result<Orders> merchantCreate(@RequestBody Map<String, Object> params) {
+    public Result<Orders> merchantCreate(@RequestBody CreateOrderRequest request) {
         try {
             Orders order = orderService.createOrder(
-                    toInt(params.get("tableId")),
-                    toInt(params.get("sessionId")),
-                    (List<Map<String, Object>>) params.get("items"),
-                    (String) params.get("phone"),
-                    (String) params.get("remark")
+                    request.getTableId(),
+                    request.getSessionId(),
+                    request.getItems(),
+                    request.getPhone(),
+                    request.getRemark()
             );
             return Result.ok(order);
         } catch (Exception e) {
@@ -89,10 +90,10 @@ public class OrderController {
 
     @PutMapping("/api/m/order/serve-item/{id}")
     public Result<OrderItem> serveItem(@PathVariable Integer id,
-                                       @RequestBody(required = false) Map<String, Object> params) {
+                                       @RequestBody(required = false) ServeItemRequest request) {
         try {
-            Integer quantity = params == null ? null : toInt(params.get("quantity"));
-            Integer expectedQuantity = params == null ? null : toInt(params.get("expectedQuantity"));
+            Integer quantity = request == null ? null : request.getQuantity();
+            Integer expectedQuantity = request == null ? null : request.getExpectedQuantity();
             return Result.ok(orderService.serveItem(id, quantity, expectedQuantity));
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
@@ -114,18 +115,6 @@ public class OrderController {
             return Result.ok(orderService.cancelOrder(id));
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
-        }
-    }
-
-    private Integer toInt(Object obj) {
-        if (obj == null) return null;
-        if (obj instanceof Number) {
-            return ((Number) obj).intValue();
-        }
-        try {
-            return Integer.parseInt(obj.toString().trim());
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid integer parameter");
         }
     }
 

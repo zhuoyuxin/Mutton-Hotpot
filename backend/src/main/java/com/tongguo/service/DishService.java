@@ -1,15 +1,16 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.dto.request.DishSaveRequest;
 import com.tongguo.entity.Dish;
 import com.tongguo.mapper.DishMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class DishService {
@@ -31,65 +32,41 @@ public class DishService {
         );
     }
 
-    public void add(Map<String, Object> params) {
-        if (params == null) {
+    public void add(DishSaveRequest request) {
+        if (request == null) {
             throw new IllegalArgumentException("请求参数不能为空");
         }
+
         Dish dish = new Dish();
-        dish.setCategoryId(toRequiredPositiveInt(params.get("categoryId"), "分类ID"));
-        dish.setName(toRequiredText(params.get("name"), "菜品名称"));
-        dish.setPrice(yuanToFen(params.get("price"), true));
-        dish.setImage(toNullableText(params.get("image")));
-        dish.setDescription(toNullableText(params.get("description")));
+        dish.setCategoryId(toRequiredPositiveInt(request.getCategoryId(), "分类ID"));
+        dish.setName(toRequiredText(request.getName(), "菜品名称"));
+        dish.setPrice(yuanToFen(request.getPrice(), true));
+        dish.setImage(toNullableText(request.getImage()));
+        dish.setDescription(toNullableText(request.getDescription()));
         dish.setStatus(1);
-        dish.setStock(toOptionalNonNegativeInt(params.get("stock"), 0, "库存"));
-        dish.setSortOrder(toOptionalNonNegativeInt(params.get("sortOrder"), 0, "排序"));
+        dish.setStock(toOptionalNonNegativeInt(request.getStock(), 0, "库存"));
+        dish.setSortOrder(toOptionalNonNegativeInt(request.getSortOrder(), 0, "排序"));
         dishMapper.insert(dish);
     }
 
-    public void update(Map<String, Object> params) {
-        if (params == null) {
+    public void update(DishSaveRequest request) {
+        if (request == null) {
             throw new IllegalArgumentException("请求参数不能为空");
         }
-        Integer id = toRequiredPositiveInt(params.get("id"), "菜品ID");
+
+        Integer id = toRequiredPositiveInt(request.getId(), "菜品ID");
         Dish dish = dishMapper.selectById(id);
         if (dish == null) {
             throw new IllegalArgumentException("菜品不存在");
         }
 
-        boolean updated = false;
-        if (params.containsKey("categoryId")) {
-            dish.setCategoryId(toRequiredPositiveInt(params.get("categoryId"), "分类ID"));
-            updated = true;
-        }
-        if (params.containsKey("name")) {
-            dish.setName(toRequiredText(params.get("name"), "菜品名称"));
-            updated = true;
-        }
-        if (params.containsKey("price")) {
-            dish.setPrice(yuanToFen(params.get("price"), true));
-            updated = true;
-        }
-        if (params.containsKey("image")) {
-            dish.setImage(toNullableText(params.get("image")));
-            updated = true;
-        }
-        if (params.containsKey("description")) {
-            dish.setDescription(toNullableText(params.get("description")));
-            updated = true;
-        }
-        if (params.containsKey("stock")) {
-            dish.setStock(toOptionalNonNegativeInt(params.get("stock"), null, "库存"));
-            updated = true;
-        }
-        if (params.containsKey("sortOrder")) {
-            dish.setSortOrder(toOptionalNonNegativeInt(params.get("sortOrder"), null, "排序"));
-            updated = true;
-        }
-        if (!updated) {
-            throw new IllegalArgumentException("请至少提供一个需要更新的字段");
-        }
-
+        dish.setCategoryId(toRequiredPositiveInt(request.getCategoryId(), "分类ID"));
+        dish.setName(toRequiredText(request.getName(), "菜品名称"));
+        dish.setPrice(yuanToFen(request.getPrice(), true));
+        dish.setImage(toNullableText(request.getImage()));
+        dish.setDescription(toNullableText(request.getDescription()));
+        dish.setStock(toOptionalNonNegativeInt(request.getStock(), 0, "库存"));
+        dish.setSortOrder(toOptionalNonNegativeInt(request.getSortOrder(), 0, "排序"));
         dish.setUpdateTime(LocalDateTime.now());
         dishMapper.updateById(dish);
     }
@@ -117,61 +94,55 @@ public class DishService {
         dishMapper.updateById(dish);
     }
 
-    private Integer yuanToFen(Object yuan, boolean required) {
+    private Integer yuanToFen(BigDecimal yuan, boolean required) {
         if (yuan == null) {
             if (required) {
                 throw new IllegalArgumentException("价格不能为空");
             }
             return 0;
         }
-        BigDecimal bd = new BigDecimal(yuan.toString());
-        if (bd.compareTo(BigDecimal.ZERO) < 0) {
+        if (yuan.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("价格不能小于0");
         }
-        bd = bd.setScale(2, BigDecimal.ROUND_HALF_UP);
-        return bd.multiply(new BigDecimal(100)).intValue();
+        BigDecimal amount = yuan.setScale(2, RoundingMode.HALF_UP);
+        return amount.multiply(new BigDecimal(100)).intValue();
     }
 
-    private Integer toRequiredPositiveInt(Object value, String fieldName) {
-        if (!(value instanceof Number)) {
+    private Integer toRequiredPositiveInt(Integer value, String fieldName) {
+        if (value == null) {
             throw new IllegalArgumentException(fieldName + "不能为空");
         }
-        int intValue = ((Number) value).intValue();
-        if (intValue <= 0) {
+        if (value <= 0) {
             throw new IllegalArgumentException(fieldName + "必须大于0");
         }
-        return intValue;
+        return value;
     }
 
-    private Integer toOptionalNonNegativeInt(Object value, Integer defaultValue, String fieldName) {
+    private Integer toOptionalNonNegativeInt(Integer value, Integer defaultValue, String fieldName) {
         if (value == null) {
             if (defaultValue == null) {
                 throw new IllegalArgumentException(fieldName + "不能为空");
             }
             return defaultValue;
         }
-        if (!(value instanceof Number)) {
-            throw new IllegalArgumentException(fieldName + "格式不正确");
-        }
-        int intValue = ((Number) value).intValue();
-        if (intValue < 0) {
+        if (value < 0) {
             throw new IllegalArgumentException(fieldName + "不能小于0");
         }
-        return intValue;
+        return value;
     }
 
-    private String toRequiredText(Object value, String fieldName) {
-        if (value == null || value.toString().trim().isEmpty()) {
+    private String toRequiredText(String value, String fieldName) {
+        if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(fieldName + "不能为空");
         }
-        return value.toString().trim();
+        return value.trim();
     }
 
-    private String toNullableText(Object value) {
+    private String toNullableText(String value) {
         if (value == null) {
             return null;
         }
-        String text = value.toString().trim();
+        String text = value.trim();
         return text.isEmpty() ? null : text;
     }
 }

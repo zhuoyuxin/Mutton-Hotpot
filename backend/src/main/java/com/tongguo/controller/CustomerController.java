@@ -3,6 +3,8 @@ package com.tongguo.controller;
 import com.tongguo.config.Result;
 import com.tongguo.dto.CustomerDetailDTO;
 import com.tongguo.dto.CustomerInfoDTO;
+import com.tongguo.dto.request.CustomerLoginRequest;
+import com.tongguo.dto.request.ManualPointsRequest;
 import com.tongguo.entity.Customer;
 import com.tongguo.entity.Orders;
 import com.tongguo.entity.PointsRecord;
@@ -15,12 +17,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class CustomerController {
@@ -35,8 +35,8 @@ public class CustomerController {
     private SessionService sessionService;
 
     @PostMapping("/api/c/auth/login")
-    public Result<CustomerInfoDTO> customerLogin(@RequestBody Map<String, String> params) {
-        String phone = params.get("phone");
+    public Result<CustomerInfoDTO> customerLogin(@RequestBody CustomerLoginRequest request) {
+        String phone = request.getPhone();
         if (phone == null || phone.trim().isEmpty()) {
             return Result.ok();
         }
@@ -77,18 +77,26 @@ public class CustomerController {
     @GetMapping("/api/c/customer/orders")
     public Result<List<Orders>> customerOrders(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         String phone = extractPhone(phoneHeader);
-        if (phone == null) return Result.error(40101, "Please login first");
+        if (phone == null) {
+            return Result.error(40101, "Please login first");
+        }
         Customer customer = customerService.getByPhone(phone);
-        if (customer == null) return Result.error(40101, "Please login first");
+        if (customer == null) {
+            return Result.error(40101, "Please login first");
+        }
         return Result.ok(orderService.getCustomerOrders(customer.getId()));
     }
 
     @GetMapping("/api/c/customer/points")
     public Result<List<PointsRecord>> customerPoints(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         String phone = extractPhone(phoneHeader);
-        if (phone == null) return Result.error(40101, "Please login first");
+        if (phone == null) {
+            return Result.error(40101, "Please login first");
+        }
         Customer customer = customerService.getByPhone(phone);
-        if (customer == null) return Result.error(40101, "Please login first");
+        if (customer == null) {
+            return Result.error(40101, "Please login first");
+        }
         return Result.ok(customerService.getPointsRecords(customer.getId()));
     }
 
@@ -100,7 +108,9 @@ public class CustomerController {
     @GetMapping("/api/m/customer/detail/{id}")
     public Result<CustomerDetailDTO> detail(@PathVariable Integer id) {
         Customer customer = customerService.detail(id);
-        if (customer == null) return Result.error("Customer does not exist");
+        if (customer == null) {
+            return Result.error("Customer does not exist");
+        }
         List<PointsRecord> records = customerService.getPointsRecords(id);
         List<Orders> orders = orderService.getCustomerOrders(id);
         CustomerDetailDTO dto = new CustomerDetailDTO();
@@ -112,30 +122,12 @@ public class CustomerController {
     }
 
     @PostMapping("/api/m/customer/points")
-    public Result<Void> manualPoints(@RequestBody Map<String, Object> params) {
+    public Result<Void> manualPoints(@RequestBody ManualPointsRequest request) {
         try {
-            customerService.manualPoints(
-                    toInteger(params.get("customerId"), "Customer id"),
-                    toInteger(params.get("points"), "Points"),
-                    (String) params.get("remark")
-            );
+            customerService.manualPoints(request.getCustomerId(), request.getPoints(), request.getRemark());
             return Result.ok();
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
-        }
-    }
-
-    private Integer toInteger(Object value, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        }
-        try {
-            return Integer.parseInt(value.toString().trim());
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(fieldName + " format is invalid");
         }
     }
 }

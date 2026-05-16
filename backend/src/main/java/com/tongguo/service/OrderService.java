@@ -1,6 +1,7 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.dto.request.OrderItemRequest;
 import com.tongguo.entity.Customer;
 import com.tongguo.entity.DiningSession;
 import com.tongguo.entity.Dish;
@@ -59,7 +60,7 @@ public class OrderService {
 
     @Transactional
     public Orders createOrder(Integer tableId, Integer sessionId,
-                              List<Map<String, Object>> items,
+                              List<OrderItemRequest> items,
                               String phone, String remark) {
         validateCreateOrderItems(items);
 
@@ -83,9 +84,9 @@ public class OrderService {
         List<PendingOrderItem> pendingItems = new ArrayList<>();
         Map<Integer, Integer> requestedQtyByDishId = new LinkedHashMap<>();
         int totalAmount = 0;
-        for (Map<String, Object> item : items) {
-            Integer dishId = toRequiredInt(item.get("dishId"), "Dish id");
-            Integer quantity = toRequiredInt(item.get("quantity"), "Dish quantity");
+        for (OrderItemRequest item : items) {
+            Integer dishId = toRequiredInt(item == null ? null : item.getDishId(), "Dish id");
+            Integer quantity = toRequiredInt(item == null ? null : item.getQuantity(), "Dish quantity");
             if (quantity <= 0) {
                 throw new IllegalArgumentException("Dish quantity must be greater than 0");
             }
@@ -405,17 +406,17 @@ public class OrderService {
         throw new IllegalArgumentException("Only waiting items can be served");
     }
 
-    private void validateCreateOrderItems(List<Map<String, Object>> items) {
+    private void validateCreateOrderItems(List<OrderItemRequest> items) {
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("Order must contain at least one dish");
         }
     }
 
-    private Integer toRequiredInt(Object value, String fieldName) {
-        if (!(value instanceof Number)) {
+    private Integer toRequiredInt(Integer value, String fieldName) {
+        if (value == null) {
             throw new IllegalArgumentException(fieldName + " is required");
         }
-        return ((Number) value).intValue();
+        return value;
     }
 
     private int requirePositiveQuantity(Integer quantity, String errorMsg) {

@@ -3,6 +3,7 @@ package com.tongguo.controller;
 import com.tongguo.config.Result;
 import com.tongguo.dto.CheckoutHistoryDTO;
 import com.tongguo.dto.SessionDetailDTO;
+import com.tongguo.dto.request.SessionCheckoutRequest;
 import com.tongguo.entity.DiningSession;
 import com.tongguo.entity.SessionCheckout;
 import com.tongguo.service.SessionService;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/m/session")
@@ -45,15 +45,14 @@ public class SessionController {
 
     @PutMapping("/checkout/{id}")
     public Result<SessionCheckout> checkout(@PathVariable Integer id,
-                                            @RequestBody Map<String, Object> params) {
-        if (params == null || !params.containsKey("actualPaid")) {
+                                            @RequestBody SessionCheckoutRequest request) {
+        if (request == null || request.getActualPaid() == null) {
             return Result.error("Actual paid amount is required");
         }
 
         try {
-            Integer actualPaidFen = parseActualPaidFen(params.get("actualPaid"));
-            String phone = (String) params.get("phone");
-            return Result.ok(sessionService.checkout(id, actualPaidFen, phone));
+            Integer actualPaidFen = parseActualPaidFen(request.getActualPaid());
+            return Result.ok(sessionService.checkout(id, actualPaidFen, request.getPhone()));
         } catch (NumberFormatException | ArithmeticException e) {
             return Result.error("Actual paid amount format is invalid");
         } catch (IllegalArgumentException e) {
@@ -61,17 +60,11 @@ public class SessionController {
         }
     }
 
-    private Integer parseActualPaidFen(Object paidObj) {
-        if (paidObj == null) {
+    private Integer parseActualPaidFen(BigDecimal actualPaid) {
+        if (actualPaid == null) {
             throw new IllegalArgumentException("Actual paid amount is required");
         }
-
-        String raw = paidObj.toString().trim();
-        if (raw.isEmpty()) {
-            throw new IllegalArgumentException("Actual paid amount is required");
-        }
-
-        BigDecimal amount = new BigDecimal(raw).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal amount = actualPaid.setScale(2, RoundingMode.HALF_UP);
         return amount.multiply(new BigDecimal(100)).intValueExact();
     }
 }

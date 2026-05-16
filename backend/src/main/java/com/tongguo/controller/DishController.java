@@ -2,14 +2,20 @@ package com.tongguo.controller;
 
 import com.tongguo.config.Result;
 import com.tongguo.dto.DishListDTO;
+import com.tongguo.dto.request.DishSaveRequest;
+import com.tongguo.dto.request.DishStockUpdateRequest;
 import com.tongguo.entity.Dish;
 import com.tongguo.service.CategoryService;
 import com.tongguo.service.DishService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 public class DishController {
@@ -26,9 +32,9 @@ public class DishController {
     }
 
     @PostMapping("/api/m/dish/add")
-    public Result<Void> add(@RequestBody Map<String, Object> params) {
+    public Result<Void> add(@RequestBody DishSaveRequest request) {
         try {
-            dishService.add(params);
+            dishService.add(request);
             return Result.ok();
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
@@ -36,9 +42,9 @@ public class DishController {
     }
 
     @PutMapping("/api/m/dish/update")
-    public Result<Void> update(@RequestBody Map<String, Object> params) {
+    public Result<Void> update(@RequestBody DishSaveRequest request) {
         try {
-            dishService.update(params);
+            dishService.update(request);
             return Result.ok();
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
@@ -56,12 +62,9 @@ public class DishController {
     }
 
     @PutMapping("/api/m/dish/stock")
-    public Result<Void> updateStock(@RequestBody Map<String, Object> params) {
+    public Result<Void> updateStock(@RequestBody DishStockUpdateRequest request) {
         try {
-            dishService.updateStock(
-                    toInteger(params == null ? null : params.get("id")),
-                    toInteger(params == null ? null : params.get("stock"))
-            );
+            dishService.updateStock(request == null ? null : request.getId(), request == null ? null : request.getStock());
             return Result.ok();
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
@@ -74,12 +77,5 @@ public class DishController {
         data.setCategories(categoryService.list());
         data.setDishes(dishService.listPublished());
         return Result.ok(data);
-    }
-
-    private Integer toInteger(Object value) {
-        if (!(value instanceof Number)) {
-            return null;
-        }
-        return ((Number) value).intValue();
     }
 }
