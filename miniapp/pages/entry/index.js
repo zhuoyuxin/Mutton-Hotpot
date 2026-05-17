@@ -1,29 +1,31 @@
-const { customerLogin } = require('../../api/customer')
 const { getTableDetail } = require('../../api/table')
+const { ensureCustomerLogin, getCustomerProfile } = require('../../utils/auth')
 const { extractTableId } = require('../../utils/navigation')
 
 Page({
   data: {
     tableId: '',
-    phone: '',
     tableInfo: null,
     loading: false,
-    submitting: false
+    submitting: false,
+    loginReady: false,
+    loginError: '',
+    customerLabel: '微信顾客'
   },
 
   onLoad(options) {
     const initialTableId = extractTableId(options) || Number(wx.getStorageSync('currentTableId') || 0)
-    const savedPhone = wx.getStorageSync('customerPhone') || ''
 
     this.setData({
-      tableId: initialTableId ? String(initialTableId) : '',
-      phone: savedPhone
+      tableId: initialTableId ? String(initialTableId) : ''
     })
 
     if (initialTableId) {
       wx.setStorageSync('currentTableId', initialTableId)
       this.loadTableInfo(initialTableId)
     }
+
+    this.loginSilently()
   },
 
   handleTableIdInput(event) {
@@ -41,12 +43,6 @@ Page({
     await this.loadTableInfo(tableId)
   },
 
-  handlePhoneInput(event) {
-    this.setData({
-      phone: String(event.detail.value || '').replace(/\s/g, '')
-    })
-  },
-
   async loadTableInfo(tableId) {
     this.setData({ loading: true })
     try {
@@ -59,9 +55,30 @@ Page({
     }
   },
 
+  async loginSilently() {
+    this.setData({
+      submitting: true,
+      loginError: ''
+    })
+    try {
+      const authData = await ensureCustomerLogin()
+      const customer = authData.customer || getCustomerProfile() || {}
+      this.setData({
+        loginReady: true,
+        customerLabel: customer.name || '微信顾客'
+      })
+    } catch (error) {
+      this.setData({
+        loginReady: false,
+        loginError: error && error.message ? error.message : '微信登录失败，请稍后重试'
+      })
+    } finally {
+      this.setData({ submitting: false })
+    }
+  },
+
   async handleSubmit() {
     const tableId = Number(this.data.tableId)
-    const phone = String(this.data.phone || '').trim()
 
     if (!tableId) {
       wx.showToast({
@@ -71,29 +88,20 @@ Page({
       return
     }
 
-    if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
-      wx.showToast({
-        title: '手机号格式不正确',
-        icon: 'none'
-      })
-      return
-    }
-
-    this.setData({ submitting: true })
-    try {
-      if (phone) {
-        await customerLogin({ phone })
-        wx.setStorageSync('customerPhone', phone)
-      } else {
-        wx.removeStorageSync('customerPhone')
+    if (!this.data.loginReady) {
+      await this.loginSilently()
+      if (!this.data.loginReady) {
+        return
       }
-
-      wx.setStorageSync('currentTableId', tableId)
-      wx.redirectTo({
-        url: `/pages/menu/index?tableId=${tableId}`
-      })
-    } finally {
-      this.setData({ submitting: false })
     }
+
+    wx.setStorageSync('currentTableId', tableId)
+    wx.redirectTo({
+      url: `/pages/menu/index?tableId=${tableId}`
+    })
+  },
+
+  retryLogin() {
+    this.loginSilently()
   }
 })

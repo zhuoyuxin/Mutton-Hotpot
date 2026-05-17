@@ -1,11 +1,11 @@
 <view class="page-shell mine-page">
   <view class="hero-shell">
     <text class="hero-kicker">Member Center</text>
-    <text class="hero-title">{{isLoggedIn ? (info.name || '铜锅会员') : '未绑定手机号'}}</text>
+    <text class="hero-title">{{isLoggedIn ? (info.name || '微信顾客') : '微信身份未就绪'}}</text>
     <text class="hero-subtitle">
-      {{isLoggedIn ? maskedPhone : '绑定手机号后可以查看积分、消费和历史订单'}}
+      {{isLoggedIn ? maskedPhone : '请先回到入口页完成微信登录，再查看积分、消费和历史订单'}}
     </text>
-    <button wx:if="{{!isLoggedIn}}" class="chip-button login-chip" bindtap="goEntry">去绑定</button>
+    <button wx:if="{{!isLoggedIn}}" class="chip-button login-chip" bindtap="goEntry">重新登录</button>
   </view>
 
   <view wx:if="{{isLoggedIn}}" class="stats-grid">
@@ -20,8 +20,8 @@
   </view>
 
   <view wx:if="{{!isLoggedIn}}" class="empty-card">
-    <text class="empty-title">当前未登录会员</text>
-    <text>回到入口页填写手机号后，这里会显示积分和消费记录。</text>
+    <text class="empty-title">当前未建立微信登录态</text>
+    <text>回到入口页重新获取微信身份后，这里会显示积分和消费记录。</text>
   </view>
 
   <view wx:else class="paper-card record-panel">

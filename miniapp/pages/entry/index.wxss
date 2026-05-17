@@ -53,3 +53,35 @@
   line-height: 1.7;
   color: #8c7063;
 }
+
+.wechat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 24rpx 26rpx;
+  border-radius: 28rpx;
+  background: rgba(145, 93, 61, 0.08);
+}
+
+.wechat-label {
+  font-size: 22rpx;
+  color: #8a6450;
+  letter-spacing: 2rpx;
+}
+
+.wechat-main {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #281815;
+}
+
+.wechat-error {
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #a34337;
+}
+
+.retry-button {
+  width: 100%;
+  margin-top: 8rpx;
+}

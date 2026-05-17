@@ -10,6 +10,7 @@ public class Customer {
     @TableId(type = IdType.AUTO)
     private Integer id;
     private String phone;
+    private String openid;
     private String name;
     private Integer points;
     @TableField("total_spent")

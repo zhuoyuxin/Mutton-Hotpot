@@ -61,7 +61,7 @@ public class OrderService {
     @Transactional
     public Orders createOrder(Integer tableId, Integer sessionId,
                               List<OrderItemRequest> items,
-                              String phone, String remark) {
+                              Integer customerId, String phone, String remark) {
         validateCreateOrderItems(items);
 
         DiningSession session;
@@ -106,17 +106,17 @@ public class OrderService {
 
         validateSellableStock(requestedQtyByDishId, pendingItems);
 
-        Integer customerId = null;
-        if (phone != null && !phone.trim().isEmpty()) {
+        Integer resolvedCustomerId = customerId;
+        if (resolvedCustomerId == null && phone != null && !phone.trim().isEmpty()) {
             Customer customer = customerService.findOrCreateByPhone(phone);
-            customerId = customer.getId();
+            resolvedCustomerId = customer.getId();
         }
 
         Orders order = new Orders();
         order.setOrderNo(generateOrderNo());
         order.setSessionId(session.getId());
         order.setTableId(resolvedTableId);
-        order.setCustomerId(customerId);
+        order.setCustomerId(resolvedCustomerId);
         order.setTotalAmount(totalAmount);
         order.setStatus(0);
         order.setRemark(remark);

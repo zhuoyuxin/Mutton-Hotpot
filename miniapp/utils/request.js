@@ -10,6 +10,12 @@ function showToast(title) {
   })
 }
 
+function clearCustomerSessionStorage() {
+  wx.removeStorageSync('customerToken')
+  wx.removeStorageSync('customerTokenExpiresAt')
+  wx.removeStorageSync('customerProfile')
+}
+
 function jumpToEntry() {
   if (redirecting401) {
     return
@@ -37,14 +43,14 @@ function request(options) {
   } = options
 
   return new Promise((resolve, reject) => {
-    const phone = wx.getStorageSync('customerPhone')
+    const token = wx.getStorageSync('customerToken')
     const mergedHeader = {
       'Content-Type': 'application/json',
       ...header
     }
 
-    if (phone) {
-      mergedHeader['X-Phone'] = phone
+    if (token) {
+      mergedHeader['X-Customer-Token'] = token
     }
 
     wx.request({
@@ -56,6 +62,7 @@ function request(options) {
         const payload = res.data || {}
 
         if (payload.code === 40101) {
+          clearCustomerSessionStorage()
           if (redirectOn401) {
             jumpToEntry()
           }

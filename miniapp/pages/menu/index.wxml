@@ -2,7 +2,7 @@
   <view class="hero-shell">
     <text class="hero-kicker">Table {{tableInfo.id || tableId}}</text>
     <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
-    <text class="hero-subtitle">{{tableInfo.area || '堂食点餐'}} · {{maskedPhone}}</text>
+    <text class="hero-subtitle">{{tableInfo.area || '堂食点餐'}} · {{customerLabel}}</text>
     <view class="hero-actions">
       <button class="chip-button" bindtap="goStatus">上菜进度</button>
       <button class="chip-button" bindtap="goMine">会员中心</button>

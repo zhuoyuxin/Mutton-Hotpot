@@ -22,3 +22,10 @@ mybatis-plus:
 logging:
   level:
     com.tongguo: debug
+
+wechat:
+  miniapp:
+    app-id: ${WECHAT_MINIAPP_APP_ID:}
+    app-secret: ${WECHAT_MINIAPP_APP_SECRET:}
+    token-secret: ${WECHAT_MINIAPP_TOKEN_SECRET:change-me-miniapp-token-secret}
+    token-expire-days: ${WECHAT_MINIAPP_TOKEN_EXPIRE_DAYS:30}

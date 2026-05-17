@@ -8,6 +8,14 @@ function customerLogin(data) {
   })
 }
 
+function wechatLogin(data) {
+  return request({
+    url: '/api/c/auth/wechat-login',
+    method: 'POST',
+    data
+  })
+}
+
 function customerInfo() {
   return request({
     url: '/api/c/customer/info',
@@ -34,6 +42,7 @@ function customerPoints() {
 
 module.exports = {
   customerLogin,
+  wechatLogin,
   customerInfo,
   customerOrders,
   customerPoints

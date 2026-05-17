@@ -2,12 +2,15 @@ package com.tongguo.controller;
 
 import com.tongguo.config.Result;
 import com.tongguo.dto.CustomerDetailDTO;
+import com.tongguo.dto.CustomerAuthDTO;
 import com.tongguo.dto.CustomerInfoDTO;
 import com.tongguo.dto.request.CustomerLoginRequest;
 import com.tongguo.dto.request.ManualPointsRequest;
+import com.tongguo.dto.request.WechatLoginRequest;
 import com.tongguo.entity.Customer;
 import com.tongguo.entity.Orders;
 import com.tongguo.entity.PointsRecord;
+import com.tongguo.service.CustomerAuthService;
 import com.tongguo.service.CustomerService;
 import com.tongguo.service.OrderService;
 import com.tongguo.service.SessionService;
@@ -29,6 +32,9 @@ public class CustomerController {
     private CustomerService customerService;
 
     @Autowired
+    private CustomerAuthService customerAuthService;
+
+    @Autowired
     private OrderService orderService;
 
     @Autowired
@@ -41,11 +47,16 @@ public class CustomerController {
             return Result.ok();
         }
         Customer customer = customerService.findOrCreateByPhone(phone);
-        CustomerInfoDTO dto = new CustomerInfoDTO();
-        dto.setId(customer.getId());
-        dto.setPhone(customer.getPhone());
-        dto.setName(customer.getName());
-        return Result.ok(dto);
+        return Result.ok(customerAuthService.toCustomerInfo(customer));
+    }
+
+    @PostMapping("/api/c/auth/wechat-login")
+    public Result<CustomerAuthDTO> wechatLogin(@RequestBody WechatLoginRequest request) {
+        try {
+            return Result.ok(customerAuthService.loginWithWechatCode(request == null ? null : request.getCode()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     public String extractPhone(String phoneHeader) {
@@ -56,31 +67,19 @@ public class CustomerController {
     }
 
     @GetMapping("/api/c/customer/info")
-    public Result<CustomerInfoDTO> customerInfo(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
-        String phone = extractPhone(phoneHeader);
-        if (phone == null) {
-            return Result.error(40101, "Please login first");
-        }
-        Customer customer = customerService.getByPhone(phone);
+    public Result<CustomerInfoDTO> customerInfo(@RequestHeader(value = "X-Customer-Token", required = false) String customerToken,
+                                                @RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
+        Customer customer = customerAuthService.resolveCustomer(customerToken, phoneHeader);
         if (customer == null) {
             return Result.error(40101, "Please login first");
         }
-        CustomerInfoDTO dto = new CustomerInfoDTO();
-        dto.setId(customer.getId());
-        dto.setPhone(customer.getPhone());
-        dto.setName(customer.getName());
-        dto.setPoints(customer.getPoints());
-        dto.setTotalSpent(customer.getTotalSpent());
-        return Result.ok(dto);
+        return Result.ok(customerAuthService.toCustomerInfo(customer));
     }
 
     @GetMapping("/api/c/customer/orders")
-    public Result<List<Orders>> customerOrders(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
-        String phone = extractPhone(phoneHeader);
-        if (phone == null) {
-            return Result.error(40101, "Please login first");
-        }
-        Customer customer = customerService.getByPhone(phone);
+    public Result<List<Orders>> customerOrders(@RequestHeader(value = "X-Customer-Token", required = false) String customerToken,
+                                               @RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
+        Customer customer = customerAuthService.resolveCustomer(customerToken, phoneHeader);
         if (customer == null) {
             return Result.error(40101, "Please login first");
         }
@@ -88,12 +87,9 @@ public class CustomerController {
     }
 
     @GetMapping("/api/c/customer/points")
-    public Result<List<PointsRecord>> customerPoints(@RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
-        String phone = extractPhone(phoneHeader);
-        if (phone == null) {
-            return Result.error(40101, "Please login first");
-        }
-        Customer customer = customerService.getByPhone(phone);
+    public Result<List<PointsRecord>> customerPoints(@RequestHeader(value = "X-Customer-Token", required = false) String customerToken,
+                                                     @RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
+        Customer customer = customerAuthService.resolveCustomer(customerToken, phoneHeader);
         if (customer == null) {
             return Result.error(40101, "Please login first");
         }

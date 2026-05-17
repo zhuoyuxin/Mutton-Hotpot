@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS session_checkout (
 
 CREATE TABLE IF NOT EXISTS customer (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    phone TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    openid TEXT,
     name TEXT,
     points INTEGER DEFAULT 0,
     total_spent INTEGER DEFAULT 0,

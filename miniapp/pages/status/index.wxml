@@ -2,9 +2,7 @@
   <view class="hero-shell">
     <text class="hero-kicker">Kitchen Live Board</text>
     <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
-    <text class="hero-subtitle">
-      {{tableInfo.area || '堂食区域'}} · 每 10 秒自动刷新一次
-    </text>
+    <text class="hero-subtitle">{{tableInfo.area || '堂食区域'}} · 每 10 秒自动刷新一次</text>
     <view class="hero-meta">
       <text>当前订单 {{totalOrders}}</text>
       <text>最后刷新 {{lastUpdatedAt}}</text>

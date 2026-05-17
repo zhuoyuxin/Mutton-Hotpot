@@ -9,4 +9,6 @@ public class CustomerInfoDTO {
     private String name;
     private Integer points;
     private Integer totalSpent;
+    private Boolean phoneBound;
+    private Boolean openidBound;
 }

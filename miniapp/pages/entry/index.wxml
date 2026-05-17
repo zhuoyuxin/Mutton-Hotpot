@@ -2,13 +2,13 @@
   <view class="hero-shell">
     <text class="hero-kicker">Copper Pot Dining</text>
     <text class="hero-title">铜锅涮肉</text>
-    <text class="hero-subtitle">扫码落座，现点现涮。桌台识别后即可直接下单。</text>
+    <text class="hero-subtitle">扫码落座，现点现涮。识别桌台后即可直接进入点餐。</text>
   </view>
 
   <view class="paper-card entry-card">
     <view class="section-title">
       <text>开始点餐</text>
-      <text>{{loading ? '识别桌台中' : '扫码 / 手输桌号'}}</text>
+      <text>{{loading ? '识别桌台中' : (loginReady ? '微信身份已识别' : '校验微信环境')}}</text>
     </view>
 
     <view class="table-banner">
@@ -35,25 +35,22 @@
       />
     </view>
 
-    <view class="field-block">
-      <text class="field-label">手机号（可选）</text>
-      <input
-        class="copper-input"
-        type="number"
-        maxlength="11"
-        placeholder="绑定后可查看积分和消费记录"
-        value="{{phone}}"
-        bindinput="handlePhoneInput"
-      />
+    <view class="wechat-panel">
+      <text class="wechat-label">当前身份</text>
+      <text class="wechat-main">{{loginReady ? customerLabel : '正在校验微信登录'}}</text>
+      <text wx:if="{{loginError}}" class="wechat-error">{{loginError}}</text>
+      <button wx:if="{{loginError}}" class="secondary-button retry-button" bindtap="retryLogin">
+        重新获取微信身份
+      </button>
     </view>
 
     <view class="entry-tips">
-      <text>1. 未填写手机号也可以直接点餐。</text>
-      <text>2. 会员页和积分明细需要手机号才能读取。</text>
-      <text>3. 真机调试时请将接口地址换成局域网 IP。</text>
+      <text>1. 现在使用微信小程序登录态识别顾客，不再依赖手机号。</text>
+      <text>2. 桌台识别后会用微信身份直接进入点餐和会员页。</text>
+      <text>3. 真机调试时请将接口地址改成局域网 IP，并配置微信 AppID / Secret。</text>
     </view>
 
-    <button class="primary-button" loading="{{submitting}}" bindtap="handleSubmit">
+    <button class="primary-button" loading="{{submitting}}" disabled="{{!loginReady}}" bindtap="handleSubmit">
       进入点餐
     </button>
   </view>

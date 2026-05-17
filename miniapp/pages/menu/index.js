@@ -1,6 +1,7 @@
 const { getCustomerDishes } = require('../../api/dish')
 const { createCustomerOrder } = require('../../api/order')
 const { getTableDetail } = require('../../api/table')
+const { ensureCustomerLogin, getCustomerProfile } = require('../../utils/auth')
 const { extractTableId } = require('../../utils/navigation')
 const { formatPrice, maskPhone } = require('../../utils/format')
 
@@ -29,7 +30,7 @@ Page({
     totalPrice: '0.00',
     showCart: false,
     remark: '',
-    maskedPhone: ''
+    customerLabel: '微信顾客'
   },
 
   onLoad(options) {
@@ -50,17 +51,31 @@ Page({
       return
     }
 
-    this.setData({
-      maskedPhone: maskPhone(wx.getStorageSync('customerPhone')) || '未绑定手机号'
-    })
-
-    this.loadData(tableId)
+    this.refreshCustomerProfile()
+    ensureCustomerLogin()
+      .then(() => {
+        this.refreshCustomerProfile()
+        return this.loadData(tableId)
+      })
+      .catch(() => {
+        this.loadData(tableId)
+      })
   },
 
   onPullDownRefresh() {
     const tableId = Number(this.data.tableId || 0)
     this.loadData(tableId).finally(() => {
       wx.stopPullDownRefresh()
+    })
+  },
+
+  refreshCustomerProfile() {
+    const profile = getCustomerProfile() || {}
+    const label = profile.phoneBound && profile.phone
+      ? maskPhone(profile.phone)
+      : (profile.name || '微信顾客')
+    this.setData({
+      customerLabel: label
     })
   },
 
@@ -235,7 +250,6 @@ Page({
       await createCustomerOrder({
         tableId: Number(this.data.tableId),
         items,
-        phone: wx.getStorageSync('customerPhone') || null,
         remark: this.data.remark || ''
       })
 

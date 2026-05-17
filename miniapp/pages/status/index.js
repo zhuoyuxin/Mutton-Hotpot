@@ -96,7 +96,7 @@ Page({
         }))
       }))
 
-      const allItems = orders.flatMap((order) => order.items || [])
+      const allItems = orders.reduce((acc, order) => acc.concat(order.items || []), [])
       const pendingItems = allItems.filter((item) => item.status === 0 || item.status === 1).length
       const servedItems = allItems.filter((item) => item.status === 2).length
 

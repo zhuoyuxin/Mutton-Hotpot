@@ -15,6 +15,8 @@ import java.util.List;
 @Service
 public class CustomerService {
 
+    private static final String DEFAULT_WECHAT_CUSTOMER_NAME = "微信顾客";
+
     @Autowired
     private CustomerMapper customerMapper;
 
@@ -47,6 +49,32 @@ public class CustomerService {
         return customer;
     }
 
+    @Transactional
+    public Customer findOrCreateByOpenId(String openId) {
+        String normalizedOpenId = normalizeRequiredText(openId, "OpenId is required");
+        Customer customer = customerMapper.selectOne(
+                new LambdaQueryWrapper<Customer>().eq(Customer::getOpenid, normalizedOpenId)
+        );
+        if (customer == null) {
+            customer = new Customer();
+            customer.setOpenid(normalizedOpenId);
+            customer.setName(DEFAULT_WECHAT_CUSTOMER_NAME);
+            customer.setPoints(0);
+            customer.setTotalSpent(0);
+            try {
+                customerMapper.insert(customer);
+            } catch (DataIntegrityViolationException e) {
+                customer = customerMapper.selectOne(
+                        new LambdaQueryWrapper<Customer>().eq(Customer::getOpenid, normalizedOpenId)
+                );
+                if (customer == null) {
+                    throw e;
+                }
+            }
+        }
+        return customer;
+    }
+
     public Customer getByPhone(String phone) {
         String normalizedPhone = normalizeText(phone);
         if (normalizedPhone == null) {
@@ -54,6 +82,16 @@ public class CustomerService {
         }
         return customerMapper.selectOne(
                 new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, normalizedPhone)
+        );
+    }
+
+    public Customer getByOpenId(String openId) {
+        String normalizedOpenId = normalizeText(openId);
+        if (normalizedOpenId == null) {
+            return null;
+        }
+        return customerMapper.selectOne(
+                new LambdaQueryWrapper<Customer>().eq(Customer::getOpenid, normalizedOpenId)
         );
     }
 
@@ -102,11 +140,19 @@ public class CustomerService {
     }
 
     public String normalizePhone(String phone) {
-        String normalizedPhone = normalizeText(phone);
-        if (normalizedPhone == null) {
-            throw new IllegalArgumentException("Phone is required");
+        return normalizeRequiredText(phone, "Phone is required");
+    }
+
+    public String normalizeRequiredText(String value, String errorMsg) {
+        String normalized = normalizeText(value);
+        if (normalized == null) {
+            throw new IllegalArgumentException(errorMsg);
         }
-        return normalizedPhone;
+        return normalized;
+    }
+
+    public String normalizeOptionalText(String value) {
+        return normalizeText(value);
     }
 
     private String normalizeText(String value) {

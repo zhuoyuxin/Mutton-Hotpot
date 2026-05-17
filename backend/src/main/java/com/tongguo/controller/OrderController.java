@@ -5,6 +5,8 @@ import com.tongguo.dto.request.CreateOrderRequest;
 import com.tongguo.dto.request.ServeItemRequest;
 import com.tongguo.entity.OrderItem;
 import com.tongguo.entity.Orders;
+import com.tongguo.entity.Customer;
+import com.tongguo.service.CustomerAuthService;
 import com.tongguo.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,17 +26,23 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private CustomerAuthService customerAuthService;
+
     @PostMapping("/api/c/order/create")
     public Result<Orders> customerCreate(@RequestBody CreateOrderRequest request,
+                                         @RequestHeader(value = "X-Customer-Token", required = false) String customerToken,
                                          @RequestHeader(value = "X-Phone", required = false) String phoneHeader) {
         try {
+            Customer customer = customerAuthService.resolveCustomer(customerToken, phoneHeader);
             String phoneFromHeader = extractPhone(phoneHeader);
             String phoneFromBody = request.getPhone();
-            String phone = phoneFromHeader != null ? phoneFromHeader : phoneFromBody;
+            String phone = customer != null ? null : (phoneFromHeader != null ? phoneFromHeader : phoneFromBody);
             Orders order = orderService.createOrder(
                     request.getTableId(),
                     null,
                     request.getItems(),
+                    customer == null ? null : customer.getId(),
                     phone,
                     request.getRemark()
             );
@@ -65,6 +73,7 @@ public class OrderController {
                     request.getTableId(),
                     request.getSessionId(),
                     request.getItems(),
+                    null,
                     request.getPhone(),
                     request.getRemark()
             );

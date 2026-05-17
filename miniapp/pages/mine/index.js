@@ -1,4 +1,5 @@
 const { customerInfo, customerOrders, customerPoints } = require('../../api/customer')
+const { ensureCustomerLogin, getCustomerProfile } = require('../../utils/auth')
 const { extractTableId } = require('../../utils/navigation')
 const { formatPrice, maskPhone, formatDateTime } = require('../../utils/format')
 
@@ -34,21 +35,13 @@ Page({
   },
 
   async loadData() {
-    const phone = wx.getStorageSync('customerPhone')
-    if (!phone) {
-      this.setData({
-        isLoggedIn: false,
-        info: null,
-        maskedPhone: '',
-        totalSpentText: '0.00',
-        orders: [],
-        pointsRecords: []
-      })
-      return
-    }
-
     this.setData({ loading: true })
     try {
+      const cachedProfile = getCustomerProfile() || {}
+      if (!wx.getStorageSync('customerToken')) {
+        await ensureCustomerLogin()
+      }
+
       const [infoResult, ordersResult, pointsResult] = await Promise.allSettled([
         customerInfo(),
         customerOrders(),
@@ -74,7 +67,7 @@ Page({
       this.setData({
         isLoggedIn: true,
         info,
-        maskedPhone: maskPhone(info.phone),
+        maskedPhone: info.phoneBound && info.phone ? maskPhone(info.phone) : (cachedProfile.name || info.name || '微信顾客'),
         totalSpentText: formatPrice(info.totalSpent),
         orders: orderList.map((order) => ({
           ...order,
@@ -86,6 +79,15 @@ Page({
           pointsText: `${record.points > 0 ? '+' : ''}${record.points}`,
           createTimeText: formatDateTime(record.createTime)
         }))
+      })
+    } catch (error) {
+      this.setData({
+        isLoggedIn: false,
+        info: null,
+        maskedPhone: '',
+        totalSpentText: '0.00',
+        orders: [],
+        pointsRecords: []
       })
     } finally {
       this.setData({ loading: false })
