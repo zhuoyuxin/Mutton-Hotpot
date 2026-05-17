@@ -28,7 +28,7 @@ async function ensureCustomerLogin(forceRefresh) {
     wx.login({
       success(res) {
         if (!res.code) {
-          reject(new Error('wx.login did not return code'))
+          reject(new Error('wx.login 未返回 code'))
           return
         }
         resolve(res)

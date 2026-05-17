@@ -1,7 +1,21 @@
 const { customerInfo, customerOrders, customerPoints } = require('../../api/customer')
 const { ensureCustomerLogin, getCustomerProfile } = require('../../utils/auth')
-const { extractTableId } = require('../../utils/navigation')
+const { extractTableId } = require('../../utils/table-route')
 const { formatPrice, maskPhone, formatDateTime } = require('../../utils/format')
+const { ORDER_STATUS_TEXT } = require('../../utils/order')
+
+function recordStatusClass(status) {
+  if (status === 3 || status === 4) {
+    return 'success'
+  }
+  if (status === 5) {
+    return 'muted'
+  }
+  if (status === 2) {
+    return 'warning'
+  }
+  return 'processing'
+}
 
 Page({
   data: {
@@ -71,6 +85,8 @@ Page({
         totalSpentText: formatPrice(info.totalSpent),
         orders: orderList.map((order) => ({
           ...order,
+          statusText: ORDER_STATUS_TEXT[order.status] || '未知状态',
+          statusClass: recordStatusClass(order.status),
           totalAmountText: formatPrice(order.totalAmount),
           createTimeText: formatDateTime(order.createTime)
         })),

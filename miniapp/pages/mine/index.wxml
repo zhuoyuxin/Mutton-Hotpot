@@ -1,11 +1,16 @@
 <view class="page-shell mine-page">
-  <view class="hero-shell">
-    <text class="hero-kicker">Member Center</text>
-    <text class="hero-title">{{isLoggedIn ? (info.name || '微信顾客') : '微信身份未就绪'}}</text>
-    <text class="hero-subtitle">
-      {{isLoggedIn ? maskedPhone : '请先回到入口页完成微信登录，再查看积分、消费和历史订单'}}
-    </text>
-    <button wx:if="{{!isLoggedIn}}" class="chip-button login-chip" bindtap="goEntry">重新登录</button>
+  <view class="hero-shell mine-hero">
+    <view class="hero-topline">
+      <text class="hero-kicker">我的</text>
+      <text class="hero-state">{{isLoggedIn ? '微信顾客' : '尚未登录'}}</text>
+    </view>
+    <text class="hero-title">{{isLoggedIn ? (info.name || '微信顾客') : '微信身份尚未就绪'}}</text>
+    <text class="hero-subtitle">{{isLoggedIn ? maskedPhone : '返回首页完成微信登录后，这里会展示积分、消费和历史订单。'}}</text>
+    <view wx:if="{{isLoggedIn}}" class="hero-badges">
+      <text class="hero-badge">{{info.phoneBound ? '已绑定手机号' : '仅使用微信身份'}}</text>
+      <text class="hero-badge">{{orders.length}} 笔订单</text>
+    </view>
+    <button wx:if="{{!isLoggedIn}}" class="chip-button hero-login-chip" bindtap="goEntry">回到首页登录</button>
   </view>
 
   <view wx:if="{{isLoggedIn}}" class="stats-grid">
@@ -17,14 +22,30 @@
       <text class="stats-label">累计消费</text>
       <text class="stats-value">¥{{totalSpentText}}</text>
     </view>
+    <view class="paper-card stats-card">
+      <text class="stats-label">历史订单</text>
+      <text class="stats-value">{{orders.length}}</text>
+    </view>
   </view>
 
-  <view wx:if="{{!isLoggedIn}}" class="empty-card">
+  <view wx:if="{{isLoggedIn}}" class="paper-card profile-note">
+    当前页面仅展示已接入的顾客数据：微信身份、积分、消费与历史记录，不展示未实现的优惠券和会员权益模块。
+  </view>
+
+  <view wx:if="{{!isLoggedIn}}" class="paper-card empty-card mine-empty">
     <text class="empty-title">当前未建立微信登录态</text>
-    <text>回到入口页重新获取微信身份后，这里会显示积分和消费记录。</text>
+    <text>回到首页重新完成微信登录后，这里会显示积分、消费与历史记录。</text>
   </view>
 
   <view wx:else class="paper-card record-panel">
+    <view class="section-head panel-head">
+      <view>
+        <text class="section-eyebrow">RECORDS</text>
+        <text class="section-title">我的记录</text>
+      </view>
+      <text class="section-meta">下拉可刷新</text>
+    </view>
+
     <view class="tab-row">
       <view class="tab-pill {{activeTab === 'orders' ? 'active' : ''}}" data-tab="orders" bindtap="switchTab">
         消费记录
@@ -40,10 +61,15 @@
       </view>
       <view wx:for="{{orders}}" wx:key="id" class="record-item">
         <view class="record-head">
-          <text class="record-title">{{item.orderNo}}</text>
-          <text class="record-price">¥{{item.totalAmountText}}</text>
+          <view class="record-main">
+            <text class="record-title">{{item.orderNo}}</text>
+            <text class="record-time">{{item.createTimeText}}</text>
+          </view>
+          <view class="record-side">
+            <text class="record-price">¥{{item.totalAmountText}}</text>
+            <text class="record-tag {{item.statusClass}}">{{item.statusText}}</text>
+          </view>
         </view>
-        <text class="record-time">{{item.createTimeText}}</text>
       </view>
     </view>
 
@@ -53,16 +79,37 @@
       </view>
       <view wx:for="{{pointsRecords}}" wx:key="id" class="record-item">
         <view class="record-head">
-          <text class="record-title">{{item.remark || '积分变动'}}</text>
-          <text class="record-points {{item.points > 0 ? 'plus' : 'minus'}}">{{item.pointsText}}</text>
+          <view class="record-main">
+            <text class="record-title">{{item.remark || '积分变动'}}</text>
+            <text class="record-time">{{item.createTimeText}}</text>
+          </view>
+          <view class="record-side">
+            <text class="record-points {{item.points > 0 ? 'plus' : 'minus'}}">{{item.pointsText}}</text>
+            <text class="record-tag neutral">{{item.points > 0 ? '入账' : '扣减'}}</text>
+          </view>
         </view>
-        <text class="record-time">{{item.createTimeText}}</text>
       </view>
     </view>
   </view>
 
-  <view class="fixed-dock">
-    <button class="secondary-button" bindtap="goStatus">上菜进度</button>
-    <button class="primary-button" bindtap="goMenu">继续点餐</button>
+  <view class="bottom-nav">
+    <view class="bottom-nav-track">
+      <view class="bottom-nav-item" bindtap="goEntry">
+        <text class="bottom-nav-mark">01</text>
+        <text class="bottom-nav-label">首页</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goMenu">
+        <text class="bottom-nav-mark">02</text>
+        <text class="bottom-nav-label">点餐</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goStatus">
+        <text class="bottom-nav-mark">03</text>
+        <text class="bottom-nav-label">订单</text>
+      </view>
+      <view class="bottom-nav-item active">
+        <text class="bottom-nav-mark">04</text>
+        <text class="bottom-nav-label">我的</text>
+      </view>
+    </view>
   </view>
 </view>

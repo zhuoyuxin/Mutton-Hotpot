@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>铜锅涮肉小程序视觉预览</title>
+  <style>
+    :root {
+      --bg: #f3ede5;
+      --paper: #fffaf4;
+      --paper-strong: #ffffff;
+      --ink: #2d1d15;
+      --muted: #7f6556;
+      --line: rgba(101, 66, 43, 0.12);
+      --brand: #d98734;
+      --brand-deep: #ab4f20;
+      --brand-soft: #ffe6b9;
+      --glow: rgba(209, 132, 54, 0.24);
+      --shadow: 0 24px 60px rgba(65, 38, 21, 0.12);
+      --radius-xl: 34px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --nav-h: 86px;
+      --cart-h: 92px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(255, 225, 180, 0.68), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(255, 196, 130, 0.28), transparent 20%),
+        linear-gradient(180deg, #f7f1e7 0%, #f1e7da 100%);
+      color: var(--ink);
+      font-family: "MiSans", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 32px 20px;
+    }
+
+    .desktop-stage {
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      width: min(1180px, 100%);
+    }
+
+    .notes {
+      flex: 1;
+      min-width: 260px;
+      padding: 24px 22px;
+      border: 1px solid rgba(83, 54, 36, 0.08);
+      border-radius: 28px;
+      background: rgba(255, 250, 244, 0.72);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 50px rgba(88, 60, 42, 0.08);
+    }
+
+    .notes h1 {
+      margin: 0 0 14px;
+      font-family: "Source Han Serif SC", "Songti SC", serif;
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: 1px;
+    }
+
+    .notes p {
+      margin: 0 0 14px;
+      color: #6e5648;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .notes ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: #6e5648;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .phone-shell {
+      position: relative;
+      width: 430px;
+      min-height: 932px;
+      border-radius: 42px;
+      border: 10px solid #15110f;
+      background: var(--paper);
+      box-shadow:
+        0 32px 90px rgba(36, 19, 11, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .phone-shell::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 11px;
+      width: 152px;
+      height: 32px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: #090909;
+      z-index: 10;
+    }
+
+    .app {
+      position: relative;
+      min-height: 100%;
+      background: linear-gradient(180deg, #f4eee5 0%, #f7f3ed 44%, #f9f5ef 100%);
+    }
+
+    .hero {
+      position: relative;
+      padding: 18px 18px 18px;
+      height: 330px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(72, 28, 9, 0.06), rgba(72, 28, 9, 0.12)),
+        radial-gradient(circle at 18% 22%, rgba(255, 248, 231, 0.9), rgba(255, 248, 231, 0.08) 28%),
+        radial-gradient(circle at 50% 42%, rgba(255, 215, 131, 0.32), transparent 32%),
+        radial-gradient(circle at 72% 12%, rgba(255, 247, 217, 0.75), transparent 18%),
+        radial-gradient(circle at 80% 78%, rgba(255, 196, 120, 0.2), transparent 26%),
+        linear-gradient(135deg, #9c531e 0%, #e8bb79 38%, #b96b2c 100%);
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      background:
+        radial-gradient(circle at 20% 64%, rgba(255, 246, 214, 0.9) 0 4px, transparent 5px),
+        radial-gradient(circle at 27% 68%, rgba(255, 228, 165, 0.75) 0 5px, transparent 6px),
+        radial-gradient(circle at 73% 26%, rgba(255, 241, 209, 0.8) 0 4px, transparent 5px),
+        radial-gradient(circle at 70% 65%, rgba(255, 247, 223, 0.72) 0 6px, transparent 7px),
+        linear-gradient(75deg, transparent 0 47%, rgba(255, 249, 227, 0.55) 48%, transparent 49%),
+        linear-gradient(68deg, transparent 0 59%, rgba(255, 247, 223, 0.44) 60%, transparent 61%);
+      filter: blur(0.6px);
+      opacity: 0.82;
+    }
+
+    .hero::after {
+      background:
+        radial-gradient(circle at center, rgba(255, 243, 222, 0.15), transparent 52%),
+        linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.12) 100%);
+      mix-blend-mode: screen;
+    }
+
+    .status-bar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      color: #2c1c14;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot-signal {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(37, 22, 16, 0.72);
+      box-shadow: 9px 0 0 rgba(37, 22, 16, 0.72), 18px 0 0 rgba(37, 22, 16, 0.72);
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .brand-chip {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      padding: 14px 16px;
+      border-radius: 999px;
+      background: rgba(255, 250, 241, 0.68);
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 40px rgba(117, 64, 22, 0.14);
+    }
+
+    .back-arrow {
+      width: 18px;
+      height: 18px;
+      border-left: 3px solid #463228;
+      border-bottom: 3px solid #463228;
+      transform: rotate(45deg);
+      flex: none;
+      margin-left: 4px;
+    }
+
+    .brand-text {
+      min-width: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #2c1c14;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-tools {
+      display: flex;
+      gap: 10px;
+    }
+
+    .tool-btn {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255, 250, 241, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.44);
+      box-shadow: 0 12px 36px rgba(117, 64, 22, 0.14);
+      backdrop-filter: blur(12px);
+      font-size: 20px;
+    }
+
+    .hero-badges {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .award-pill,
+    .promo-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      max-width: 100%;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 250, 243, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.48);
+      color: #513828;
+      box-shadow: 0 12px 36px rgba(117, 64, 22, 0.14);
+      backdrop-filter: blur(12px);
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .promo-pill {
+      justify-content: space-between;
+      width: 100%;
+      border-radius: 18px;
+    }
+
+    .promo-mark {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ff6930, #ffb347);
+      color: white;
+      font-weight: 700;
+      flex: none;
+    }
+
+    .content {
+      position: relative;
+      margin-top: -42px;
+      padding: 0 14px 172px;
+      z-index: 3;
+    }
+
+    .surface {
+      padding: 14px;
+      border-radius: 30px 30px 0 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(252, 248, 241, 0.98));
+      box-shadow: 0 -10px 40px rgba(97, 54, 29, 0.08);
+    }
+
+    .carousel-card,
+    .coupon-banner,
+    .menu-board {
+      border-radius: 24px;
+      background: var(--paper-strong);
+      box-shadow: 0 12px 34px rgba(87, 53, 34, 0.08);
+      overflow: hidden;
+    }
+
+    .carousel-card {
+      position: relative;
+      padding: 18px;
+      background:
+        linear-gradient(135deg, #fae36d, #ffd8a5 48%, #fff2dd 100%);
+    }
+
+    .carousel-scene {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 250px;
+      padding: 8px 8px 0;
+    }
+
+    .campaign-copy {
+      position: absolute;
+      left: 6px;
+      top: 10px;
+      z-index: 2;
+      display: grid;
+      gap: 10px;
+    }
+
+    .new-label {
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 16px;
+      background: #d93025;
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      transform: rotate(-6deg);
+      box-shadow: 0 10px 24px rgba(163, 36, 20, 0.2);
+    }
+
+    .campaign-title {
+      font-family: "Source Han Serif SC", "Songti SC", serif;
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1.02;
+      letter-spacing: 1px;
+      color: #622d12;
+      text-shadow: 0 3px 0 rgba(255, 248, 230, 0.4);
+    }
+
+    .plate {
+      position: relative;
+      border-radius: 50%;
+      border: 9px solid #c98449;
+      background:
+        radial-gradient(circle at 50% 50%, #f4d970 0 37%, transparent 38%),
+        radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.55), transparent 42%),
+        repeating-conic-gradient(from 0deg, #fff5df 0 10deg, #cb8d55 10deg 18deg, #fff5df 18deg 28deg);
+      box-shadow:
+        inset 0 0 0 6px rgba(255, 248, 236, 0.8),
+        0 18px 30px rgba(120, 67, 31, 0.18);
+      animation: float 5s ease-in-out infinite;
+    }
+
+    .plate::before {
+      content: "";
+      position: absolute;
+      inset: 20%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 45% 60%, #f0d453 0 58%, transparent 59%),
+        radial-gradient(circle at 52% 42%, #ab5425 0 18%, transparent 19%),
+        radial-gradient(circle at 57% 47%, #c86b33 0 16%, transparent 17%),
+        radial-gradient(circle at 49% 50%, #7f3616 0 14%, transparent 15%);
+      filter: drop-shadow(0 10px 12px rgba(86, 40, 19, 0.18));
+    }
+
+    .plate.main {
+      width: 210px;
+      height: 210px;
+      transform: translate(6px, 10px);
+    }
+
+    .plate.side {
+      width: 164px;
+      height: 164px;
+      margin-right: 6px;
+      animation-delay: -1.6s;
+    }
+
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .carousel-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(81, 56, 40, 0.28);
+    }
+
+    .carousel-dots span.active {
+      width: 26px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #d16e2a, #ffbe4d);
+    }
+
+    .coupon-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-top: 14px;
+      padding: 18px 20px;
+      background:
+        radial-gradient(circle at 88% 32%, rgba(255, 210, 81, 0.55), transparent 20%),
+        linear-gradient(135deg, #fff0ac, #ffe08f 62%, #ffeeba);
+    }
+
+    .coupon-text strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .coupon-text span {
+      color: #8f7027;
+      font-size: 13px;
+    }
+
+    .coupon-btn {
+      flex: none;
+      padding: 14px 20px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ffcb28, #f2a100);
+      color: #563400;
+      font-size: 16px;
+      font-weight: 800;
+      box-shadow: 0 12px 20px rgba(201, 147, 13, 0.24);
+    }
+
+    .menu-board {
+      display: grid;
+      grid-template-columns: 100px minmax(0, 1fr);
+      gap: 0;
+      margin-top: 18px;
+      min-height: 440px;
+      overflow: hidden;
+    }
+
+    .category-rail {
+      padding: 16px 10px 12px;
+      background: linear-gradient(180deg, #fffdf8, #fbf5eb);
+      border-right: 1px solid var(--line);
+    }
+
+    .category-tab {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      padding: 14px 8px;
+      margin-bottom: 8px;
+      border-radius: 20px;
+      color: #897466;
+      cursor: pointer;
+      transition: 0.24s ease;
+    }
+
+    .category-tab.active {
+      background: linear-gradient(180deg, #fff8e8, #fff1d2);
+      color: #4d3326;
+      box-shadow: inset 4px 0 0 #efb62c;
+    }
+
+    .category-icon {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: rgba(239, 182, 44, 0.12);
+      font-size: 18px;
+    }
+
+    .category-name {
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .product-area {
+      padding: 18px 14px;
+      background: linear-gradient(180deg, #fffefd, #fff9f1);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-family: "Source Han Serif SC", "Songti SC", serif;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+
+    .section-head span {
+      color: #9b7c6a;
+      font-size: 13px;
+    }
+
+    .product-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .product-card {
+      overflow: hidden;
+      border: 1px solid rgba(117, 72, 42, 0.1);
+      border-radius: 22px;
+      background: white;
+      box-shadow: 0 14px 30px rgba(94, 57, 34, 0.08);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .product-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 34px rgba(94, 57, 34, 0.12);
+    }
+
+    .product-art {
+      position: relative;
+      height: 170px;
+      padding: 16px;
+      background:
+        linear-gradient(135deg, rgba(255, 245, 229, 0.36), rgba(255, 187, 120, 0.18)),
+        linear-gradient(135deg, #d5843c, #ffbe70);
+      overflow: hidden;
+    }
+
+    .product-art::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 70% 35%, rgba(255, 255, 255, 0.45), transparent 18%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .art-plate {
+      position: absolute;
+      right: 18px;
+      bottom: -14px;
+      width: 176px;
+      height: 176px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at center, #f0d86f 0 35%, transparent 36%),
+        repeating-conic-gradient(from 0deg, #fff2dd 0 10deg, #c78045 10deg 18deg, #fff2dd 18deg 28deg);
+      border: 10px solid #f9efe0;
+      box-shadow: 0 10px 24px rgba(74, 42, 21, 0.18);
+    }
+
+    .art-meat {
+      position: absolute;
+      right: 64px;
+      bottom: 60px;
+      width: 68px;
+      height: 44px;
+      border-radius: 40px 32px 28px 18px;
+      background: linear-gradient(135deg, #6d2b15, #bb6736);
+      box-shadow:
+        12px -6px 0 -3px #9a4f25,
+        -10px 8px 0 -4px #7f3416,
+        4px 12px 0 -6px #c06c38;
+    }
+
+    .art-badge {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #fff6d8;
+      color: #7c380f;
+      font-size: 13px;
+      font-weight: 800;
+      transform: rotate(-11deg);
+      box-shadow: 0 10px 18px rgba(113, 67, 27, 0.16);
+    }
+
+    .product-info {
+      padding: 16px 16px 18px;
+    }
+
+    .product-name {
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .product-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #fff4e9;
+      color: #d06f2d;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .product-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+    }
+
+    .price-block {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .price-now {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .price-origin {
+      color: #b7a598;
+      text-decoration: line-through;
+      font-size: 14px;
+    }
+
+    .choose-btn {
+      min-width: 94px;
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ffd23b, #f2ac07);
+      color: #5a3800;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 10px 18px rgba(206, 152, 16, 0.22);
+      cursor: pointer;
+    }
+
+    .floating-cart {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: calc(var(--nav-h) + 12px);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 26px;
+      background: rgba(255, 252, 246, 0.96);
+      box-shadow: 0 20px 40px rgba(86, 54, 31, 0.14);
+      border: 1px solid rgba(117, 72, 42, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .assist-card {
+      width: 86px;
+      text-align: center;
+      padding-right: 12px;
+      border-right: 1px solid var(--line);
+    }
+
+    .assist-card strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .assist-card span {
+      color: #e2691f;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .bag {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #ffe59c, #ffc93f);
+      color: #794700;
+      font-size: 25px;
+      box-shadow: inset 0 -8px 14px rgba(255, 255, 255, 0.2);
+      position: relative;
+      flex: none;
+    }
+
+    .bag-count {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #e04f22;
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+    }
+
+    .cart-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .cart-copy strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 3px;
+    }
+
+    .cart-copy span {
+      color: #8d7568;
+      font-size: 13px;
+    }
+
+    .scan-btn {
+      border: 0;
+      padding: 16px 26px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ffeeb6, #ffd85a);
+      color: #735200;
+      font-weight: 900;
+      font-size: 16px;
+      box-shadow: 0 12px 22px rgba(219, 177, 45, 0.18);
+      cursor: pointer;
+      flex: none;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--nav-h);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: rgba(255, 255, 255, 0.98);
+      border-top: 1px solid rgba(92, 60, 38, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-item {
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 4px;
+      color: #7b6457;
+      font-size: 12px;
+    }
+
+    .nav-item.active {
+      color: #d07d1f;
+    }
+
+    .nav-icon {
+      font-size: 23px;
+      line-height: 1;
+    }
+
+    .home-indicator {
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      width: 130px;
+      height: 5px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: rgba(54, 36, 27, 0.8);
+      z-index: 6;
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.7s ease forwards;
+    }
+
+    .delay-1 { animation-delay: 0.08s; }
+    .delay-2 { animation-delay: 0.14s; }
+    .delay-3 { animation-delay: 0.2s; }
+    .delay-4 { animation-delay: 0.28s; }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(6px, 10px) rotate(0deg); }
+      50% { transform: translate(2px, 4px) rotate(-2deg); }
+    }
+
+    @media (max-width: 1024px) {
+      .desktop-stage {
+        flex-direction: column-reverse;
+        align-items: center;
+      }
+
+      .notes {
+        width: min(430px, 100%);
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+
+      .desktop-stage {
+        width: 100%;
+        gap: 0;
+      }
+
+      .notes {
+        display: none;
+      }
+
+      .phone-shell {
+        width: 100%;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="desktop-stage">
+    <aside class="notes">
+      <h1>铜锅涮肉<br>小程序首页视觉稿</h1>
+      <p>这是一个不接接口的纯静态 HTML 预览页，重点验证你要的“小程序首页式点餐 UI”方向：顶部食欲氛围图、促销轮播、左侧分类、右侧商品卡、悬浮购物车和底部 Tab。</p>
+      <p>我没有照搬原图，而是把同类结构翻译成更适合“铜锅涮肉”的暖铜色、奶油纸感和餐饮陈列逻辑。这样后面落到真实小程序时，品牌识别会更强。</p>
+      <ul>
+        <li>左侧分类可点击切换，右侧商品会联动</li>
+        <li>“选套餐 / 加入”按钮可增加购物车数量</li>
+        <li>悬浮购物车金额会实时更新</li>
+        <li>底部导航和扫码按钮都保留了小程序常见节奏</li>
+      </ul>
+    </aside>
+
+    <div class="phone-shell">
+      <div class="app">
+        <section class="hero fade-up">
+          <div class="status-bar">
+            <span>16:19</span>
+            <div class="status-right">
+              <span>4G</span>
+              <div class="dot-signal"></div>
+              <span>47%</span>
+            </div>
+          </div>
+
+          <div class="topbar fade-up delay-1">
+            <div class="brand-chip">
+              <div class="back-arrow"></div>
+              <div class="brand-text">铜锅涮肉 · 观前街门店</div>
+            </div>
+            <div class="header-tools">
+              <button class="tool-btn" type="button">⌕</button>
+              <button class="tool-btn" type="button">◎</button>
+            </div>
+          </div>
+
+          <div class="hero-badges fade-up delay-2">
+            <div class="award-pill">🏅 苏式热锅榜单好评第 2 名</div>
+            <div class="promo-pill">
+              <span><span class="promo-mark">换购</span> 指定锅底加 2 元可换鲜切肥牛小份</span>
+              <strong>详情 ›</strong>
+            </div>
+          </div>
+        </section>
+
+        <main class="content">
+          <div class="surface">
+            <section class="carousel-card fade-up delay-3">
+              <div class="carousel-scene">
+                <div class="campaign-copy">
+                  <div class="new-label">NEW 新品</div>
+                  <div class="campaign-title">手抓饭<br>系列</div>
+                </div>
+                <div class="plate main"></div>
+                <div class="plate side"></div>
+              </div>
+              <div class="carousel-dots">
+                <span class="active"></span>
+                <span></span>
+                <span></span>
+              </div>
+            </section>
+
+            <section class="coupon-banner fade-up delay-4">
+              <div class="coupon-text">
+                <strong>登录后查看专属优惠券</strong>
+                <span>新客锅底券、老客复购券、节气套餐券</span>
+              </div>
+              <button class="coupon-btn" type="button">去登录</button>
+            </section>
+
+            <section class="menu-board fade-up delay-4">
+              <nav class="category-rail" id="categoryRail"></nav>
+              <div class="product-area">
+                <div class="section-head">
+                  <h2 id="sectionTitle">超值套餐</h2>
+                  <span id="sectionHint">今日推荐 3 款</span>
+                </div>
+                <div class="product-list" id="productList"></div>
+              </div>
+            </section>
+          </div>
+        </main>
+
+        <div class="floating-cart fade-up delay-4">
+          <div class="assist-card">
+            <strong>优惠助手</strong>
+            <span id="couponCount">0 张可用</span>
+          </div>
+          <div class="bag">
+            👜
+            <div class="bag-count" id="bagCount">0</div>
+          </div>
+          <div class="cart-copy">
+            <strong id="cartTitle">未选购商品</strong>
+            <span id="cartSummary">可先选套餐、锅底或单点肉类</span>
+          </div>
+          <button class="scan-btn" type="button">扫桌码</button>
+        </div>
+
+        <nav class="bottom-nav">
+          <div class="nav-item">
+            <div class="nav-icon">◉</div>
+            <div>首页</div>
+          </div>
+          <div class="nav-item active">
+            <div class="nav-icon">🍜</div>
+            <div>点餐</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">🧾</div>
+            <div>订单</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">◌</div>
+            <div>我的</div>
+          </div>
+        </nav>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const categories = [
+      { id: "combo", icon: "👜", name: "超值套餐", hint: "今日推荐 3 款" },
+      { id: "new", icon: "✦", name: "当季上新", hint: "本周主推 2 款" },
+      { id: "broth", icon: "♨", name: "招牌锅底", hint: "锅底必点 3 款" },
+      { id: "meat", icon: "🥩", name: "鲜切肉品", hint: "现切现摆 4 款" },
+      { id: "snack", icon: "◎", name: "小吃配菜", hint: "下锅小料 4 款" }
+    ];
+
+    const products = {
+      combo: [
+        { name: "招牌双人铜锅套餐", price: 129.9, origin: 158, tags: ["限时", "双人推荐", "锅底+肉盘"], action: "选套餐", badge: "热卖" },
+        { name: "鲜切肥牛轻享套餐", price: 79.9, origin: 96, tags: ["轻量", "工作日晚餐"], action: "加入", badge: "加价换" },
+        { name: "手切羊后腿尊享套餐", price: 168, origin: 198, tags: ["店长推荐", "羊肉控"], action: "选套餐", badge: "招牌" }
+      ],
+      new: [
+        { name: "麻酱烧饼夹羊肉", price: 26, origin: 32, tags: ["当季新品", "主食"], action: "加入", badge: "NEW" },
+        { name: "酸梅冰酪奶茶", price: 18, origin: 24, tags: ["限定饮品", "解腻"], action: "加入", badge: "夏季限定" }
+      ],
+      broth: [
+        { name: "老北京清汤铜锅", price: 28, origin: 32, tags: ["经典", "涮肉首选"], action: "选锅底", badge: "招牌" },
+        { name: "菌香牛骨双拼锅", price: 36, origin: 42, tags: ["双拼", "鲜香"], action: "选锅底", badge: "人气" },
+        { name: "番茄酸汤暖胃锅", price: 32, origin: 38, tags: ["酸甜", "老人小孩"], action: "选锅底", badge: "暖胃" }
+      ],
+      meat: [
+        { name: "手切太阳卷羊肉", price: 48, origin: 56, tags: ["鲜切", "必点"], action: "加入", badge: "现切" },
+        { name: "雪花肥牛卷", price: 42, origin: 49, tags: ["嫩滑", "高回购"], action: "加入", badge: "推荐" },
+        { name: "羔羊上脑大份", price: 66, origin: 74, tags: ["大份", "多人聚餐"], action: "加入", badge: "厚切" }
+      ],
+      snack: [
+        { name: "炸豆皮拼鲜炸响铃", price: 22, origin: 28, tags: ["下锅快", "口感丰富"], action: "加入", badge: "热搭" },
+        { name: "现调二八麻酱小料", price: 8, origin: 10, tags: ["灵魂蘸料", "可续"], action: "加入", badge: "必配" },
+        { name: "鲜鸭血午餐肉拼盘", price: 24, origin: 30, tags: ["高频搭配"], action: "加入", badge: "加单" }
+      ]
+    };
+
+    let activeCategory = "combo";
+    let cartCount = 0;
+    let cartTotal = 0;
+
+    const categoryRail = document.getElementById("categoryRail");
+    const productList = document.getElementById("productList");
+    const sectionTitle = document.getElementById("sectionTitle");
+    const sectionHint = document.getElementById("sectionHint");
+    const bagCount = document.getElementById("bagCount");
+    const cartTitle = document.getElementById("cartTitle");
+    const cartSummary = document.getElementById("cartSummary");
+
+    function renderCategories() {
+      categoryRail.innerHTML = categories.map((category) => `
+        <div class="category-tab ${category.id === activeCategory ? "active" : ""}" data-category="${category.id}">
+          <div class="category-icon">${category.icon}</div>
+          <div class="category-name">${category.name}</div>
+        </div>
+      `).join("");
+
+      categoryRail.querySelectorAll(".category-tab").forEach((node) => {
+        node.addEventListener("click", () => {
+          activeCategory = node.dataset.category;
+          renderCategories();
+          renderProducts();
+        });
+      });
+    }
+
+    function renderProducts() {
+      const currentCategory = categories.find((item) => item.id === activeCategory);
+      const currentProducts = products[activeCategory] || [];
+      sectionTitle.textContent = currentCategory.name;
+      sectionHint.textContent = currentCategory.hint;
+
+      productList.innerHTML = currentProducts.map((product, index) => `
+        <article class="product-card">
+          <div class="product-art">
+            <div class="art-badge">${product.badge}</div>
+            <div class="art-plate" style="transform: rotate(${index % 2 === 0 ? "-4deg" : "4deg"})"></div>
+            <div class="art-meat"></div>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">${product.name}</h3>
+            <div class="product-tags">
+              ${product.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
+            </div>
+            <div class="product-bottom">
+              <div class="price-block">
+                <span class="price-now">¥${product.price.toFixed(1)}</span>
+                <span class="price-origin">¥${product.origin}</span>
+              </div>
+              <button class="choose-btn" type="button" data-price="${product.price}">${product.action}</button>
+            </div>
+          </div>
+        </article>
+      `).join("");
+
+      productList.querySelectorAll(".choose-btn").forEach((button) => {
+        button.addEventListener("click", () => {
+          cartCount += 1;
+          cartTotal += Number(button.dataset.price);
+          renderCart();
+          button.textContent = "已加入";
+          button.style.background = "linear-gradient(135deg, #ffde82, #f2b61f)";
+        });
+      });
+    }
+
+    function renderCart() {
+      bagCount.textContent = cartCount;
+      if (!cartCount) {
+        cartTitle.textContent = "未选购商品";
+        cartSummary.textContent = "可先选套餐、锅底或单点肉类";
+        return;
+      }
+
+      cartTitle.textContent = `已选 ${cartCount} 件商品`;
+      cartSummary.textContent = `合计 ¥${cartTotal.toFixed(1)} · 点击可继续加购`;
+    }
+
+    renderCategories();
+    renderProducts();
+    renderCart();
+  </script>
+</body>
+</html>

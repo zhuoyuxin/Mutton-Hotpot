@@ -4,10 +4,21 @@
 
 ## 当前能力
 
-- 入口页：扫码 / 手输桌号，自动 `wx.login`
+- 入口页：仅支持摄像头扫码桌码，自动 `wx.login`
 - 菜单页：分类筛选、搜索、购物袋、备注、提交订单
 - 进度页：查看当前桌台订单和上菜状态，10 秒自动刷新
-- 我的页：基于微信登录态读取会员信息、消费记录、积分明细
+- 我的页：基于微信登录态读取顾客信息、消费记录、积分明细
+
+## 扫码桌号兼容范围
+
+入口页扫码后会自动解析桌号，当前兼容以下二维码内容：
+
+- 纯数字桌号，例如 `12`
+- 带 `tableId` 参数的地址，例如 `pages/entry/index?tableId=12`
+- 带 `scene` 参数的二维码内容
+- 现有商家后台生成的 H5 桌码，例如 `/c/login/12`
+
+也就是说，现阶段就算桌台二维码还是旧的 Web 链接，也可以直接扫码进入小程序入口页并识别桌号。
 
 ## 认证方案
 
@@ -16,11 +27,9 @@
 1. 小程序调用 `wx.login`
 2. 前端把 `code` 发给后端 `/api/c/auth/wechat-login`
 3. 后端调用微信 `code2Session` 换取 `openid`
-4. 后端按 `openid` 创建 / 查找顾客
+4. 后端按 `openid` 创建 / 查询顾客
 5. 后端签发业务 token
 6. 小程序后续请求统一带 `X-Customer-Token`
-
-这样可以确认请求来自微信小程序环境，同时避免依赖收费的手机号能力。
 
 ## 目录
 
@@ -28,10 +37,11 @@
 - `pages/entry`：扫码落座入口
 - `pages/menu`：点餐主页面
 - `pages/status`：上菜状态
-- `pages/mine`：会员信息
+- `pages/mine`：顾客信息与历史记录
 - `api/`：对接后端 `/api/c/*`
 - `utils/config.js`：接口地址配置
 - `utils/auth.js`：微信登录与 token 存储
+- `utils/table-route.js`：桌号与扫码结果解析
 
 ## 后端新增 / 调整
 
@@ -62,7 +72,7 @@ WECHAT_MINIAPP_TOKEN_SECRET=自定义长随机串
 WECHAT_MINIAPP_TOKEN_EXPIRE_DAYS=30
 ```
 
-如果没有配置 `AppID / AppSecret`，小程序入口页会拿不到微信登录态。
+如果没有配置 `AppID / AppSecret`，小程序入口页拿不到微信登录态。
 
 ## 本地运行
 
@@ -70,7 +80,7 @@ WECHAT_MINIAPP_TOKEN_EXPIRE_DAYS=30
 2. 配好上面的微信环境变量
 3. 用微信开发者工具打开 `miniapp/`
 4. 确认 `utils/config.js` 指向你的后端
-5. 在开发者工具中进入入口页调试，可传 `tableId=1`
+5. 在开发者工具中从入口页点击“扫桌码”调试
 
 ## 真机调试注意
 

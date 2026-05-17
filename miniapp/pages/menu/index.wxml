@@ -1,18 +1,24 @@
 <view class="page-shell menu-page">
-  <view class="hero-shell">
-    <text class="hero-kicker">Table {{tableInfo.id || tableId}}</text>
+  <view class="hero-shell menu-hero">
+    <view class="hero-topline">
+      <text class="hero-kicker">桌边点餐</text>
+      <text class="hero-state">{{customerLabel}}</text>
+    </view>
     <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
-    <text class="hero-subtitle">{{tableInfo.area || '堂食点餐'}} · {{customerLabel}}</text>
-    <view class="hero-actions">
-      <button class="chip-button" bindtap="goStatus">上菜进度</button>
-      <button class="chip-button" bindtap="goMine">会员中心</button>
+    <text class="hero-subtitle">{{tableInfo.area || '堂食区域'}} · 现点现做 · 支持备注口味</text>
+    <view class="hero-badges">
+      <text class="hero-badge">{{categories.length > 1 ? ((categories.length - 1) + ' 个分类') : '菜单已加载'}}</text>
+      <text class="hero-badge">{{totalCount ? ('已选 ' + totalCount + ' 份菜品') : '先挑几样招牌菜'}}</text>
     </view>
   </view>
 
-  <view class="paper-card filter-card">
-    <view class="section-title">
-      <text>今天涮什么</text>
-      <text>{{totalCount ? ('已选 ' + totalCount + ' 份') : '现点现做'}}</text>
+  <view class="paper-card search-panel">
+    <view class="section-head search-head">
+      <view>
+        <text class="section-eyebrow">MENU</text>
+        <text class="section-title">按分类点餐</text>
+      </view>
+      <text class="section-meta">{{loading ? '正在加载菜单' : '下拉可刷新'}}</text>
     </view>
     <input
       class="copper-input"
@@ -20,95 +26,124 @@
       value="{{keyword}}"
       bindinput="handleKeywordInput"
     />
-    <scroll-view scroll-x class="category-scroll">
+  </view>
+
+  <view class="menu-board">
+    <scroll-view scroll-y class="paper-card category-rail">
       <view class="category-list">
         <view
           wx:for="{{categories}}"
           wx:key="id"
-          class="category-pill {{activeCategoryId === item.id ? 'active' : ''}}"
+          wx:for-index="idx"
+          class="category-tab {{activeCategoryId === item.id ? 'active' : ''}}"
           data-id="{{item.id}}"
           bindtap="selectCategory"
         >
-          {{item.name}}
+          <text class="category-code">{{idx === 0 ? 'ALL' : (idx < 10 ? ('0' + idx) : idx)}}</text>
+          <text class="category-name">{{item.name}}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <scroll-view scroll-y class="dish-scroll">
+      <view wx:if="{{!loading && dishes.length === 0}}" class="paper-card empty-card dish-empty">
+        <text class="empty-title">当前没有可展示的菜品</text>
+        <text>换个分类或试试别的搜索关键词。</text>
+      </view>
+
+      <view wx:else class="dish-list">
+        <view wx:for="{{dishes}}" wx:key="id" class="paper-card dish-card">
+          <view class="dish-visual {{!item.image ? 'placeholder' : ''}}">
+            <image wx:if="{{item.image}}" class="dish-image" src="{{item.image}}" mode="aspectFill"></image>
+            <view wx:else class="dish-art">
+              <text class="dish-art-badge">现点现做</text>
+              <text class="dish-art-name">{{item.name}}</text>
+            </view>
+          </view>
+
+          <view class="dish-body">
+            <view class="dish-head">
+              <view class="dish-title-box">
+                <text class="dish-name">{{item.name}}</text>
+                <text class="dish-desc">{{item.description || '精选食材，按桌出餐，支持备注口味。'}}</text>
+              </view>
+              <text class="stock-chip {{item.stock > 0 ? '' : 'soldout'}}">{{item.stock > 0 ? ('余量 ' + item.stock) : '已售罄'}}</text>
+            </view>
+
+            <view class="dish-tags">
+              <text class="dish-tag">{{item.image ? '门店实拍' : '铜锅推荐'}}</text>
+              <text class="dish-tag">{{item.stock > 0 ? '支持下单' : '暂不可下单'}}</text>
+            </view>
+
+            <view class="dish-foot">
+              <view class="dish-price-box">
+                <text class="dish-price-symbol">¥</text>
+                <text class="dish-price">{{item.priceText}}</text>
+                <text class="dish-price-unit">/份</text>
+              </view>
+              <view class="stepper">
+                <button
+                  wx:if="{{item.cartQty > 0}}"
+                  class="stepper-button subtle"
+                  data-id="{{item.id}}"
+                  data-delta="-1"
+                  bindtap="changeQty"
+                >
+                  -
+                </button>
+                <text wx:if="{{item.cartQty > 0}}" class="stepper-count">{{item.cartQty}}</text>
+                <button
+                  class="stepper-button"
+                  data-id="{{item.id}}"
+                  data-delta="1"
+                  bindtap="changeQty"
+                  disabled="{{item.stock <= item.cartQty}}"
+                >
+                  +
+                </button>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
     </scroll-view>
   </view>
 
-  <view wx:if="{{!loading && dishes.length === 0}}" class="empty-card">
-    <text class="empty-title">当前没有可展示的菜品</text>
-    <text>换个分类或者搜索词试试看。</text>
-  </view>
-
-  <view wx:else class="dish-list">
-    <view wx:for="{{dishes}}" wx:key="id" class="paper-card dish-card">
-      <image wx:if="{{item.image}}" class="dish-image" src="{{item.image}}" mode="aspectFill"></image>
-      <view class="dish-body {{!item.image ? 'full' : ''}}">
-        <view class="dish-head">
-          <text class="dish-name">{{item.name}}</text>
-          <text class="dish-stock">{{item.stock > 0 ? ('余量 ' + item.stock) : '已售罄'}}</text>
-        </view>
-        <text class="dish-desc">{{item.description || '铜锅现切，现点现做。'}}</text>
-        <view class="dish-foot">
-          <text class="dish-price">¥{{item.priceText}}</text>
-          <view class="stepper">
-            <button
-              wx:if="{{item.cartQty > 0}}"
-              class="stepper-button subtle"
-              data-id="{{item.id}}"
-              data-delta="-1"
-              bindtap="changeQty"
-            >
-              -
-            </button>
-            <text wx:if="{{item.cartQty > 0}}" class="stepper-count">{{item.cartQty}}</text>
-            <button
-              class="stepper-button"
-              data-id="{{item.id}}"
-              data-delta="1"
-              bindtap="changeQty"
-              disabled="{{item.stock <= item.cartQty}}"
-            >
-              +
-            </button>
-          </view>
-        </view>
-      </view>
-    </view>
-  </view>
-
   <view class="cart-bar">
-    <view class="cart-summary" bindtap="toggleCart">
-      <view class="cart-badge {{totalCount ? 'visible' : ''}}">{{totalCount}}</view>
-      <view class="cart-copy">
-        <text class="cart-total">¥{{totalPrice}}</text>
-        <text class="cart-hint">{{totalCount ? '点击查看已选菜品' : '先挑几样招牌和热菜'}}</text>
-      </view>
+    <view class="cart-badge {{totalCount ? 'visible' : ''}}">{{totalCount || 0}}</view>
+    <view class="cart-copy" bindtap="toggleCart">
+      <text class="cart-title">{{totalCount ? ('已选 ' + totalCount + ' 份菜品') : '未选择菜品'}}</text>
+      <text class="cart-summary">{{totalCount ? ('合计 ¥' + totalPrice + ' · 点击查看明细') : '先挑几样锅底、肉类或蔬菜'}}</text>
     </view>
-    <button class="secondary-button compact" bindtap="goStatus">进度</button>
-    <button class="primary-button compact" loading="{{submitting}}" disabled="{{totalCount === 0}}" bindtap="submitOrder">
-      提交下单
+    <button class="secondary-button compact-button" bindtap="goStatus">订单</button>
+    <button class="primary-button compact-button primary-compact" loading="{{submitting}}" disabled="{{totalCount === 0}}" bindtap="submitOrder">
+      提交
     </button>
   </view>
 
   <view wx:if="{{showCart}}" class="overlay-mask" bindtap="closeCart"></view>
   <view wx:if="{{showCart}}" class="cart-sheet">
     <view class="sheet-handle"></view>
-    <view class="section-title">
-      <text>已选菜品</text>
-      <text>{{totalCount}} 份 · ¥{{totalPrice}}</text>
+    <view class="section-head">
+      <view>
+        <text class="section-eyebrow">CART</text>
+        <text class="section-title">已选清单</text>
+      </view>
+      <text class="section-meta">{{totalCount}} 份 · ¥{{totalPrice}}</text>
     </view>
 
     <scroll-view scroll-y class="cart-scroll">
       <view wx:for="{{cartItems}}" wx:key="id" class="cart-item">
         <view class="cart-item-main">
-          <text class="cart-item-name">{{item.name}}</text>
-          <text class="cart-item-price">¥{{item.subtotalText}}</text>
-        </view>
-        <view class="cart-item-actions">
-          <button class="stepper-button subtle" data-id="{{item.id}}" data-delta="-1" bindtap="changeQty">-</button>
-          <text class="stepper-count">{{item.qty}}</text>
-          <button class="stepper-button" data-id="{{item.id}}" data-delta="1" bindtap="changeQty">+</button>
+          <view class="cart-item-copy">
+            <text class="cart-item-name">{{item.name}}</text>
+            <text class="cart-item-price">¥{{item.subtotalText}}</text>
+          </view>
+          <view class="cart-item-actions">
+            <button class="stepper-button subtle" data-id="{{item.id}}" data-delta="-1" bindtap="changeQty">-</button>
+            <text class="stepper-count">{{item.qty}}</text>
+            <button class="stepper-button" data-id="{{item.id}}" data-delta="1" bindtap="changeQty">+</button>
+          </view>
         </view>
       </view>
     </scroll-view>
@@ -118,14 +153,33 @@
       <textarea
         class="copper-textarea"
         maxlength="100"
-        placeholder="例如：少辣、先上涮品、不要香菜"
+        placeholder="例如：少辣、先上锅底、不放香菜"
         value="{{remark}}"
         bindinput="handleRemarkInput"
       ></textarea>
     </view>
 
-    <button class="primary-button" loading="{{submitting}}" bindtap="submitOrder">
-      确认下单
-    </button>
+    <button class="primary-button" loading="{{submitting}}" bindtap="submitOrder">确认下单</button>
+  </view>
+
+  <view class="bottom-nav">
+    <view class="bottom-nav-track">
+      <view class="bottom-nav-item" bindtap="goEntry">
+        <text class="bottom-nav-mark">01</text>
+        <text class="bottom-nav-label">首页</text>
+      </view>
+      <view class="bottom-nav-item active">
+        <text class="bottom-nav-mark">02</text>
+        <text class="bottom-nav-label">点餐</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goStatus">
+        <text class="bottom-nav-mark">03</text>
+        <text class="bottom-nav-label">订单</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goMine">
+        <text class="bottom-nav-mark">04</text>
+        <text class="bottom-nav-label">我的</text>
+      </view>
+    </view>
   </view>
 </view>

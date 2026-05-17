@@ -1,6 +1,6 @@
 const { getTableOrders } = require('../../api/order')
 const { getTableDetail } = require('../../api/table')
-const { extractTableId } = require('../../utils/navigation')
+const { extractTableId } = require('../../utils/table-route')
 const { ORDER_STATUS_TEXT, ITEM_STATUS_TEXT } = require('../../utils/order')
 const { formatDateTime } = require('../../utils/format')
 
@@ -125,6 +125,12 @@ Page({
       clearInterval(this.pollingTimer)
       this.pollingTimer = null
     }
+  },
+
+  goEntry() {
+    const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
+    const url = tableId ? `/pages/entry/index?tableId=${tableId}` : '/pages/entry/index'
+    wx.redirectTo({ url })
   },
 
   goMenu() {

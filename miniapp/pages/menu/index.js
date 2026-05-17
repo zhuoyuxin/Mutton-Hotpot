@@ -2,7 +2,7 @@ const { getCustomerDishes } = require('../../api/dish')
 const { createCustomerOrder } = require('../../api/order')
 const { getTableDetail } = require('../../api/table')
 const { ensureCustomerLogin, getCustomerProfile } = require('../../utils/auth')
-const { extractTableId } = require('../../utils/navigation')
+const { extractTableId } = require('../../utils/table-route')
 const { formatPrice, maskPhone } = require('../../utils/format')
 
 function showToast(title) {
@@ -20,7 +20,7 @@ Page({
     loading: false,
     submitting: false,
     keyword: '',
-    categories: [{ id: 0, name: '全部' }],
+    categories: [{ id: 0, name: '全部菜品' }],
     allDishes: [],
     dishes: [],
     activeCategoryId: 0,
@@ -74,6 +74,7 @@ Page({
     const label = profile.phoneBound && profile.phone
       ? maskPhone(profile.phone)
       : (profile.name || '微信顾客')
+
     this.setData({
       customerLabel: label
     })
@@ -91,7 +92,7 @@ Page({
         getCustomerDishes()
       ])
 
-      const categories = [{ id: 0, name: '全部' }].concat(dishData.categories || [])
+      const categories = [{ id: 0, name: '全部菜品' }].concat(dishData.categories || [])
       const allDishes = (dishData.dishes || dishData || [])
         .filter((dish) => dish.status === undefined || dish.status === 1)
         .map((dish) => ({ ...dish }))
@@ -281,6 +282,12 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
+  },
+
+  goEntry() {
+    const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
+    const url = tableId ? `/pages/entry/index?tableId=${tableId}` : '/pages/entry/index'
+    wx.redirectTo({ url })
   },
 
   goStatus() {

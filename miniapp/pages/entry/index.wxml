@@ -1,57 +1,98 @@
 <view class="page-shell entry-page">
-  <view class="hero-shell">
-    <text class="hero-kicker">Copper Pot Dining</text>
-    <text class="hero-title">铜锅涮肉</text>
-    <text class="hero-subtitle">扫码落座，现点现涮。识别桌台后即可直接进入点餐。</text>
+  <view class="hero-shell hero-entry">
+    <view class="hero-topline">
+      <text class="hero-kicker">铜锅涮肉 · 微信点餐</text>
+      <text class="hero-state">{{loginReady ? '微信身份已识别' : '正在识别微信身份'}}</text>
+    </view>
+    <text class="hero-title">先扫桌码，再开始点餐</text>
+    <text class="hero-subtitle">首页只支持扫码选桌。识别到真实桌台后，才允许进入点餐、查看上菜进度和消费记录。</text>
+    <view class="hero-badges">
+      <text class="hero-badge">{{tableInfo ? (tableInfo.name + (tableInfo.area ? ' · ' + tableInfo.area : '')) : '等待扫描桌台二维码'}}</text>
+      <text class="hero-badge">{{customerLabel}}</text>
+    </view>
   </view>
 
   <view class="paper-card entry-card">
-    <view class="section-title">
-      <text>开始点餐</text>
-      <text>{{loading ? '识别桌台中' : (loginReady ? '微信身份已识别' : '校验微信环境')}}</text>
-    </view>
-
-    <view class="table-banner">
-      <text class="table-banner-label">当前桌台</text>
-      <view wx:if="{{tableInfo}}" class="table-banner-main">
-        <text class="table-banner-name">{{tableInfo.name}}</text>
-        <text class="table-banner-area">{{tableInfo.area || '堂食区域'}}</text>
+    <view class="section-head">
+      <view>
+        <text class="section-eyebrow">SCAN FIRST</text>
+        <text class="section-title">用摄像头识别桌台二维码</text>
       </view>
-      <view wx:else class="table-banner-empty">
-        <text>还没有识别到桌台。</text>
-        <text>可直接输入桌号进行调试和点餐。</text>
+      <text class="section-meta">{{scanLoading ? '正在调用相机' : (tableReady ? '桌台已识别' : '首页仅支持扫码选桌')}}</text>
+    </view>
+
+    <button class="scan-button" loading="{{scanLoading}}" bindtap="handleScanTable">
+      <text class="scan-button-title">扫桌码</text>
+      <text class="scan-button-sub">打开摄像头，识别桌台二维码</text>
+    </button>
+
+    <view class="table-panel">
+      <text class="table-panel-label">当前桌台</text>
+      <view wx:if="{{tableInfo}}" class="table-panel-main">
+        <text class="table-panel-name">{{tableInfo.name}}</text>
+        <text class="table-panel-sub">{{tableInfo.area || '堂食区域'}} · 桌号 {{tableInfo.id || tableId}}</text>
+      </view>
+      <view wx:else class="table-panel-empty">
+        <text class="table-panel-tip">还没有识别到桌台</text>
+        <text class="table-panel-sub">如果当前桌码还是旧的 H5 链接，也可以直接扫码，系统会自动解析其中的桌号并校验桌台是否存在。</text>
       </view>
     </view>
 
-    <view class="field-block">
-      <text class="field-label">桌号</text>
-      <input
-        class="copper-input"
-        type="number"
-        placeholder="例如 8"
-        value="{{tableId}}"
-        bindinput="handleTableIdInput"
-        bindblur="handleTableBlur"
-      />
+    <view class="identity-panel">
+      <text class="identity-label">当前微信身份</text>
+      <text class="identity-main">{{loginReady ? customerLabel : '正在完成静默登录'}}</text>
+      <text class="identity-note">当前版本已切换为微信身份登录，不再依赖手机号才能进入点餐。</text>
+      <text wx:if="{{loginError}}" class="identity-error">{{loginError}}</text>
+      <button wx:if="{{loginError}}" class="secondary-button identity-button" bindtap="retryLogin">重新获取微信身份</button>
     </view>
 
-    <view class="wechat-panel">
-      <text class="wechat-label">当前身份</text>
-      <text class="wechat-main">{{loginReady ? customerLabel : '正在校验微信登录'}}</text>
-      <text wx:if="{{loginError}}" class="wechat-error">{{loginError}}</text>
-      <button wx:if="{{loginError}}" class="secondary-button retry-button" bindtap="retryLogin">
-        重新获取微信身份
-      </button>
+    <view class="capability-list">
+      <view class="capability-item">
+        <text class="capability-index">01</text>
+        <view class="capability-copy">
+          <text class="capability-title">首页不再手输桌号</text>
+          <text class="capability-desc">必须通过摄像头扫码选择当前桌台，避免在入口页随意指定别的桌号。</text>
+        </view>
+      </view>
+      <view class="capability-item">
+        <text class="capability-index">02</text>
+        <view class="capability-copy">
+          <text class="capability-title">扫码后校验桌台</text>
+          <text class="capability-desc">只有成功读取到真实桌台详情，才允许进入点餐页。</text>
+        </view>
+      </view>
+      <view class="capability-item">
+        <text class="capability-index">03</text>
+        <view class="capability-copy">
+          <text class="capability-title">兼容现有旧桌码</text>
+          <text class="capability-desc">支持纯数字桌号、旧 H5 桌码链接，以及带 tableId 的路径或 query 参数。</text>
+        </view>
+      </view>
     </view>
 
-    <view class="entry-tips">
-      <text>1. 现在使用微信小程序登录态识别顾客，不再依赖手机号。</text>
-      <text>2. 桌台识别后会用微信身份直接进入点餐和会员页。</text>
-      <text>3. 真机调试时请将接口地址改成局域网 IP，并配置微信 AppID / Secret。</text>
-    </view>
-
-    <button class="primary-button" loading="{{submitting}}" disabled="{{!loginReady}}" bindtap="handleSubmit">
+    <button class="primary-button entry-submit" loading="{{submitting}}" disabled="{{!loginReady || !tableReady}}" bindtap="handleSubmit">
       进入点餐
     </button>
+  </view>
+
+  <view class="bottom-nav">
+    <view class="bottom-nav-track">
+      <view class="bottom-nav-item active">
+        <text class="bottom-nav-mark">01</text>
+        <text class="bottom-nav-label">首页</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goMenu">
+        <text class="bottom-nav-mark">02</text>
+        <text class="bottom-nav-label">点餐</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goStatus">
+        <text class="bottom-nav-mark">03</text>
+        <text class="bottom-nav-label">订单</text>
+      </view>
+      <view class="bottom-nav-item" bindtap="goMine">
+        <text class="bottom-nav-mark">04</text>
+        <text class="bottom-nav-label">我的</text>
+      </view>
+    </view>
   </view>
 </view>

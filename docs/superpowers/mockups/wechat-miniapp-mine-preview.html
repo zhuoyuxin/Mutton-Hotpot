@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>铜锅涮肉小程序我的页预览</title>
+  <style>
+    :root {
+      --bg: #f4eee7;
+      --paper: #fffaf3;
+      --paper-strong: #ffffff;
+      --ink: #2b1b14;
+      --muted: #83695a;
+      --line: rgba(108, 72, 45, 0.12);
+      --brand: #d78834;
+      --brand-deep: #a34721;
+      --brand-soft: #ffe8ba;
+      --gold: #efc45e;
+      --shadow: 0 24px 60px rgba(63, 37, 22, 0.12);
+      --radius-xl: 34px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --nav-h: 86px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(255, 230, 185, 0.66), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(255, 198, 136, 0.24), transparent 18%),
+        linear-gradient(180deg, #f7f1e8 0%, #f2e7da 100%);
+      color: var(--ink);
+      font-family: "MiSans", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 32px 20px;
+    }
+
+    .desktop-stage {
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      width: min(1180px, 100%);
+    }
+
+    .notes {
+      flex: 1;
+      min-width: 260px;
+      padding: 24px 22px;
+      border: 1px solid rgba(83, 54, 36, 0.08);
+      border-radius: 28px;
+      background: rgba(255, 250, 244, 0.72);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 50px rgba(88, 60, 42, 0.08);
+    }
+
+    .notes h1 {
+      margin: 0 0 14px;
+      font-family: "Source Han Serif SC", "Songti SC", serif;
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: 1px;
+    }
+
+    .notes p {
+      margin: 0 0 14px;
+      color: #6e5648;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .notes ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: #6e5648;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .phone-shell {
+      position: relative;
+      width: 430px;
+      min-height: 932px;
+      border-radius: 42px;
+      border: 10px solid #15110f;
+      background: var(--paper);
+      box-shadow:
+        0 32px 90px rgba(36, 19, 11, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .phone-shell::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 11px;
+      width: 152px;
+      height: 32px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: #090909;
+      z-index: 10;
+    }
+
+    .app {
+      position: relative;
+      min-height: 100%;
+      background: linear-gradient(180deg, #f5efe6 0%, #f8f3ec 44%, #faf6f0 100%);
+    }
+
+    .hero {
+      position: relative;
+      padding: 18px 18px 0;
+      height: 310px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255, 243, 213, 0.84), transparent 24%),
+        radial-gradient(circle at 78% 14%, rgba(255, 244, 221, 0.72), transparent 18%),
+        radial-gradient(circle at 76% 68%, rgba(255, 196, 120, 0.18), transparent 24%),
+        linear-gradient(145deg, #3f1b0f 0%, #9c4d22 48%, #de9646 100%);
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      background:
+        radial-gradient(circle at 28% 66%, rgba(255, 233, 175, 0.18), transparent 12%),
+        radial-gradient(circle at 72% 38%, rgba(255, 250, 231, 0.14), transparent 15%),
+        linear-gradient(70deg, transparent 0 58%, rgba(255, 240, 205, 0.22) 59%, transparent 60%),
+        linear-gradient(84deg, transparent 0 42%, rgba(255, 243, 220, 0.18) 43%, transparent 44%);
+    }
+
+    .hero::after {
+      background:
+        radial-gradient(circle at center, rgba(255, 247, 228, 0.08), transparent 50%),
+        linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.12) 100%);
+      mix-blend-mode: screen;
+    }
+
+    .status-bar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      color: #fff8ea;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot-signal {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 248, 232, 0.82);
+      box-shadow: 9px 0 0 rgba(255, 248, 232, 0.82), 18px 0 0 rgba(255, 248, 232, 0.82);
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 22px;
+      color: #fff6ea;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    .tool-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .tool-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 247, 230, 0.24);
+      background: rgba(255, 250, 241, 0.1);
+      backdrop-filter: blur(8px);
+      color: #fff8ec;
+      font-size: 18px;
+    }
+
+    .profile-card {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-top: 26px;
+      padding: 20px;
+      border-radius: 28px;
+      background: rgba(255, 250, 243, 0.12);
+      border: 1px solid rgba(255, 248, 232, 0.18);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 36px rgba(44, 18, 8, 0.12);
+    }
+
+    .avatar {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      flex: none;
+      border-radius: 50%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 35%, #ffe9bd, transparent 28%),
+        linear-gradient(180deg, #5b2c16 0%, #c5783a 100%);
+      border: 3px solid rgba(255, 246, 225, 0.78);
+      box-shadow: 0 10px 22px rgba(35, 12, 6, 0.18);
+    }
+
+    .avatar::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      width: 26px;
+      height: 26px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: #f6cfab;
+    }
+
+    .avatar::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      width: 46px;
+      height: 28px;
+      transform: translateX(-50%);
+      border-radius: 28px 28px 14px 14px;
+      background: #f2bf8d;
+    }
+
+    .profile-copy {
+      min-width: 0;
+      flex: 1;
+      color: #fff8ec;
+    }
+
+    .profile-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .member-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ffe7b1, #f8c95d);
+      color: #6f4306;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+
+    .profile-sub {
+      font-size: 13px;
+      color: rgba(255, 244, 225, 0.84);
+      margin-bottom: 10px;
+    }
+
+    .profile-meta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: rgba(255, 244, 225, 0.76);
+    }
+
+    .content {
+      position: relative;
+      margin-top: -34px;
+      padding: 0 14px 120px;
+      z-index: 3;
+    }
+
+    .surface {
+      padding: 14px;
+      border-radius: 30px 30px 0 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(252, 248, 241, 0.98));
+      box-shadow: 0 -10px 40px rgba(97, 54, 29, 0.08);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stats-card,
+    .perks-card,
+    .record-card {
+      border-radius: 24px;
+      background: var(--paper-strong);
+      box-shadow: 0 14px 34px rgba(91, 58, 35, 0.08);
+    }
+
+    .stats-card {
+      position: relative;
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .stats-card::before {
+      content: "";
+      position: absolute;
+      right: -20px;
+      top: -20px;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(250, 212, 122, 0.14);
+    }
+
+    .stats-label {
+      display: block;
+      margin-bottom: 12px;
+      color: #8a6f60;
+      font-size: 13px;
+    }
+
+    .stats-value {
+      display: block;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 0.3px;
+    }
+
+    .stats-desc {
+      display: block;
+      margin-top: 8px;
+      color: #b08d78;
+      font-size: 12px;
+    }
+
+    .perks-card {
+      margin-top: 14px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 85% 20%, rgba(255, 213, 88, 0.24), transparent 20%),
+        linear-gradient(135deg, #fff6d8, #fffdf7);
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .card-head h2 {
+      margin: 0;
+      font-family: "Source Han Serif SC", "Songti SC", serif;
+      font-size: 22px;
+      letter-spacing: 1px;
+    }
+
+    .card-head span {
+      color: #8b715e;
+      font-size: 13px;
+    }
+
+    .perks-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .perk {
+      padding: 14px 10px;
+      text-align: center;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(185, 146, 61, 0.12);
+    }
+
+    .perk-icon {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .perk strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .perk span {
+      color: #8d7568;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .record-card {
+      margin-top: 14px;
+      padding: 16px;
+    }
+
+    .tab-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: #f5efe7;
+      color: #846b5c;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.24s ease;
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, #ffd969, #f0af29);
+      color: #5d3600;
+      box-shadow: 0 12px 22px rgba(208, 154, 28, 0.18);
+    }
+
+    .record-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .record-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .record-item:first-child {
+      border-top: 0;
+      padding-top: 4px;
+    }
+
+    .record-main {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .record-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .record-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: #90786a;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .record-side {
+      text-align: right;
+      flex: none;
+    }
+
+    .record-amount {
+      display: block;
+      font-size: 17px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .record-amount.positive {
+      color: #2d7d4a;
+    }
+
+    .record-amount.negative {
+      color: #b14d29;
+    }
+
+    .record-tag {
+      display: inline-block;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: #fff4e8;
+      color: #cf6c2e;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--nav-h);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: rgba(255, 255, 255, 0.98);
+      border-top: 1px solid rgba(92, 60, 38, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-item {
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 4px;
+      color: #7b6457;
+      font-size: 12px;
+    }
+
+    .nav-item.active {
+      color: #d07d1f;
+    }
+
+    .nav-icon {
+      font-size: 23px;
+      line-height: 1;
+    }
+
+    .home-indicator {
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      width: 130px;
+      height: 5px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: rgba(54, 36, 27, 0.8);
+      z-index: 6;
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.7s ease forwards;
+    }
+
+    .delay-1 { animation-delay: 0.08s; }
+    .delay-2 { animation-delay: 0.14s; }
+    .delay-3 { animation-delay: 0.2s; }
+    .delay-4 { animation-delay: 0.28s; }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .desktop-stage {
+        flex-direction: column-reverse;
+        align-items: center;
+      }
+
+      .notes {
+        width: min(430px, 100%);
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+
+      .desktop-stage {
+        width: 100%;
+        gap: 0;
+      }
+
+      .notes {
+        display: none;
+      }
+
+      .phone-shell {
+        width: 100%;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="desktop-stage">
+    <aside class="notes">
+      <h1>铜锅涮肉<br>小程序“我的”页视觉稿</h1>
+      <p>这个版本延续首页的暖铜色、米纸感和餐饮会员视觉，但把重心切到了“会员价值感”：头像头图、积分消费概览、权益区、消费记录与积分明细切换。</p>
+      <p>它不是电商式“账号设置页”，而是更接近餐饮会员中心：你一进来先看到身份、积分、累计消费，再往下是权益和近期消费轨迹。</p>
+      <ul>
+        <li>顶部会员头图保留品牌暖铜氛围</li>
+        <li>中段用双卡片承接积分与消费</li>
+        <li>下方 Tabs 切换“消费记录 / 积分明细”</li>
+        <li>可直接用于你后续小程序“我的”正式开发</li>
+      </ul>
+    </aside>
+
+    <div class="phone-shell">
+      <div class="app">
+        <section class="hero fade-up">
+          <div class="status-bar">
+            <span>16:19</span>
+            <div class="status-right">
+              <span>5G</span>
+              <div class="dot-signal"></div>
+              <span>47%</span>
+            </div>
+          </div>
+
+          <div class="topbar fade-up delay-1">
+            <div class="page-title">我的</div>
+            <div class="tool-group">
+              <button class="tool-btn" type="button">✦</button>
+              <button class="tool-btn" type="button">⌕</button>
+            </div>
+          </div>
+
+          <div class="profile-card fade-up delay-2">
+            <div class="avatar"></div>
+            <div class="profile-copy">
+              <div class="profile-name">
+                <span>陈香贵食客</span>
+                <span class="member-badge">铜锅会员</span>
+              </div>
+              <div class="profile-sub">微信顾客 · 绑定桌台 08 号 · 近 30 天到店 4 次</div>
+              <div class="profile-meta">
+                <span>✅ 微信身份已识别</span>
+                <span>🎁 3 张券待使用</span>
+                <span>🔥 当前等级：暖锅银卡</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <main class="content">
+          <div class="surface">
+            <section class="stats-grid fade-up delay-3">
+              <article class="stats-card">
+                <span class="stats-label">当前积分</span>
+                <strong class="stats-value">2,480</strong>
+                <span class="stats-desc">距离金卡还差 520 分</span>
+              </article>
+              <article class="stats-card">
+                <span class="stats-label">累计消费</span>
+                <strong class="stats-value">¥1,286</strong>
+                <span class="stats-desc">本月已消费 ¥248</span>
+              </article>
+            </section>
+
+            <section class="perks-card fade-up delay-4">
+              <div class="card-head">
+                <h2>会员权益</h2>
+                <span>按到店频次解锁</span>
+              </div>
+              <div class="perks-row">
+                <div class="perk">
+                  <div class="perk-icon">🎟</div>
+                  <strong>到店券包</strong>
+                  <span>工作日锅底减 8 元</span>
+                </div>
+                <div class="perk">
+                  <div class="perk-icon">🥩</div>
+                  <strong>加量换购</strong>
+                  <span>羊肉卷半价加购</span>
+                </div>
+                <div class="perk">
+                  <div class="perk-icon">🫖</div>
+                  <strong>热饮赠送</strong>
+                  <span>晚市可领酸梅汤</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="record-card fade-up delay-4">
+              <div class="card-head">
+                <h2>消费与积分</h2>
+                <span>最近更新：今天 16:05</span>
+              </div>
+              <div class="tab-row">
+                <div class="tab active" data-tab="orders">消费记录</div>
+                <div class="tab" data-tab="points">积分明细</div>
+              </div>
+              <div class="record-list" id="recordList"></div>
+            </section>
+          </div>
+        </main>
+
+        <nav class="bottom-nav">
+          <div class="nav-item">
+            <div class="nav-icon">◉</div>
+            <div>首页</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">🍜</div>
+            <div>点餐</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">🧾</div>
+            <div>订单</div>
+          </div>
+          <div class="nav-item active">
+            <div class="nav-icon">◌</div>
+            <div>我的</div>
+          </div>
+        </nav>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const dataMap = {
+      orders: [
+        {
+          title: "招牌双人铜锅套餐",
+          meta: ["观前街门店", "2026-05-17 12:14", "桌台 08"],
+          amount: "¥168.0",
+          tag: "已完成"
+        },
+        {
+          title: "手切羊后腿 + 清汤锅底",
+          meta: ["平江路门店", "2026-05-11 18:42", "桌台 12"],
+          amount: "¥236.0",
+          tag: "复购"
+        },
+        {
+          title: "鲜切肥牛轻享套餐",
+          meta: ["观前街门店", "2026-05-02 20:08", "桌台 05"],
+          amount: "¥79.9",
+          tag: "工作日晚餐"
+        }
+      ],
+      points: [
+        {
+          title: "堂食结账赠送积分",
+          meta: ["观前街门店", "2026-05-17 12:16", "订单完成后到账"],
+          amount: "+168",
+          tag: "已到账",
+          positive: true
+        },
+        {
+          title: "会员券兑换抵扣",
+          meta: ["系统发放", "2026-05-12 09:30", "锅底券兑换"],
+          amount: "-80",
+          tag: "已使用",
+          positive: false
+        },
+        {
+          title: "签到奖励",
+          meta: ["小程序签到", "2026-05-10 10:01", "连续签到第 3 天"],
+          amount: "+20",
+          tag: "任务奖励",
+          positive: true
+        }
+      ]
+    };
+
+    let activeTab = "orders";
+
+    const recordList = document.getElementById("recordList");
+    const tabNodes = Array.from(document.querySelectorAll(".tab"));
+
+    function renderTabs() {
+      tabNodes.forEach((node) => {
+        node.classList.toggle("active", node.dataset.tab === activeTab);
+      });
+    }
+
+    function renderList() {
+      const list = dataMap[activeTab] || [];
+      recordList.innerHTML = list.map((item) => `
+        <article class="record-item">
+          <div class="record-main">
+            <div class="record-title">${item.title}</div>
+            <div class="record-meta">
+              ${item.meta.map((meta) => `<span>${meta}</span>`).join("")}
+            </div>
+          </div>
+          <div class="record-side">
+            <span class="record-amount ${item.positive === false ? "negative" : (item.positive ? "positive" : "")}">
+              ${item.amount}
+            </span>
+            <span class="record-tag">${item.tag}</span>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    tabNodes.forEach((node) => {
+      node.addEventListener("click", () => {
+        activeTab = node.dataset.tab;
+        renderTabs();
+        renderList();
+      });
+    });
+
+    renderTabs();
+    renderList();
+  </script>
+</body>
+</html>

@@ -66,7 +66,7 @@ function request(options) {
           if (redirectOn401) {
             jumpToEntry()
           }
-          reject(new Error(payload.message || 'Please login first'))
+          reject(new Error(payload.message || '请先完成微信登录'))
           return
         }
 
@@ -74,7 +74,7 @@ function request(options) {
           if (showError) {
             showToast('接口返回格式异常')
           }
-          reject(new Error('Unexpected response payload'))
+          reject(new Error('接口返回异常'))
           return
         }
 
@@ -82,7 +82,7 @@ function request(options) {
           if (showError) {
             showToast(payload.message || '请求失败')
           }
-          reject(new Error(payload.message || 'Request failed'))
+          reject(new Error(payload.message || '请求失败'))
           return
         }
 

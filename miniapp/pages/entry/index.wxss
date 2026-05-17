@@ -1,16 +1,45 @@
+@import "../../styles/common.wxss";
+
 .entry-card {
   padding: 30rpx;
 }
 
-.table-banner {
-  margin-bottom: 24rpx;
-  padding: 26rpx;
-  border-radius: 28rpx;
-  background:
-    linear-gradient(180deg, rgba(191, 118, 72, 0.1), rgba(255, 255, 255, 0.62));
+.scan-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  min-height: 186rpx;
+  padding: 28rpx 30rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #3b1c15 0%, #8d4025 56%, #d8924f 100%);
+  color: #fff4e8;
+  box-shadow: 0 18rpx 38rpx rgba(101, 45, 23, 0.2);
 }
 
-.table-banner-label {
+.scan-button-title {
+  font-size: 42rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.scan-button-sub {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: rgba(255, 244, 230, 0.86);
+}
+
+.table-panel {
+  margin-top: 20rpx;
+  padding: 26rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, rgba(191, 118, 72, 0.1), rgba(255, 255, 255, 0.64));
+}
+
+.table-panel-label {
   display: block;
   margin-bottom: 14rpx;
   font-size: 22rpx;
@@ -18,70 +47,120 @@
   letter-spacing: 2rpx;
 }
 
-.table-banner-main {
+.table-panel-main {
   display: flex;
-  align-items: baseline;
-  gap: 14rpx;
+  flex-direction: column;
 }
 
-.table-banner-name {
+.table-panel-name {
   font-size: 40rpx;
   font-weight: 700;
   color: #2a1714;
 }
 
-.table-banner-area {
-  font-size: 24rpx;
-  color: #8a6450;
+.table-panel-tip {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #2d1b18;
 }
 
-.table-banner-empty {
-  display: flex;
-  flex-direction: column;
-  gap: 10rpx;
+.table-panel-sub {
+  margin-top: 8rpx;
   font-size: 24rpx;
-  color: #86685b;
-  line-height: 1.6;
-}
-
-.entry-tips {
-  display: flex;
-  flex-direction: column;
-  gap: 10rpx;
-  margin: 28rpx 0 30rpx;
-  font-size: 22rpx;
   line-height: 1.7;
-  color: #8c7063;
+  color: #86685b;
 }
 
-.wechat-panel {
+.table-panel-empty {
   display: flex;
   flex-direction: column;
-  gap: 10rpx;
+}
+
+.identity-panel {
+  display: flex;
+  flex-direction: column;
+  margin-top: 22rpx;
   padding: 24rpx 26rpx;
   border-radius: 28rpx;
-  background: rgba(145, 93, 61, 0.08);
+  background-color: rgba(145, 93, 61, 0.08);
 }
 
-.wechat-label {
+.identity-label {
   font-size: 22rpx;
   color: #8a6450;
   letter-spacing: 2rpx;
 }
 
-.wechat-main {
-  font-size: 30rpx;
+.identity-main {
+  margin-top: 10rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: #281815;
 }
 
-.wechat-error {
+.identity-note {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #856758;
+}
+
+.identity-error {
+  margin-top: 10rpx;
   font-size: 22rpx;
   line-height: 1.6;
   color: #a34337;
 }
 
-.retry-button {
+.identity-button {
   width: 100%;
+  margin-top: 12rpx;
+}
+
+.capability-list {
+  margin: 26rpx 0 30rpx;
+}
+
+.capability-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 18rpx;
+}
+
+.capability-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 18rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, rgba(184, 77, 44, 0.14), rgba(219, 144, 80, 0.14));
+  color: #ab4a2a;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.capability-copy {
+  flex: 1;
+}
+
+.capability-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #2b1a18;
+}
+
+.capability-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #856758;
+}
+
+.entry-submit {
   margin-top: 8rpx;
 }
