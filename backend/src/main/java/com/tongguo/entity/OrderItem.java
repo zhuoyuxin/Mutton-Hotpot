@@ -17,6 +17,8 @@ public class OrderItem {
     private String dishName;
     @TableField("dish_price")
     private Integer dishPrice;
+    @TableField("portion_type")
+    private String portionType;
     private Integer quantity;
     private Integer status;
     @TableField("create_time")

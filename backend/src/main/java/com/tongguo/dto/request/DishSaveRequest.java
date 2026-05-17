@@ -10,6 +10,8 @@ public class DishSaveRequest {
     private Integer categoryId;
     private String name;
     private BigDecimal price;
+    private Boolean allowHalfPortion;
+    private BigDecimal halfPrice;
     private String image;
     private String description;
     private Integer stock;

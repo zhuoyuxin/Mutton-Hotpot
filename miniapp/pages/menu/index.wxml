@@ -5,10 +5,10 @@
       <text class="hero-state">{{customerLabel}}</text>
     </view>
     <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
-    <text class="hero-subtitle">{{tableInfo.area || '堂食区域'}} · 现点现做 · 支持备注口味</text>
+    <text class="hero-subtitle">{{tableInfo.area || '堂食区域'}} · 现点现做 · 支持整份和半份</text>
     <view class="hero-badges">
       <text class="hero-badge">{{categories.length > 1 ? ((categories.length - 1) + ' 个分类') : '菜单已加载'}}</text>
-      <text class="hero-badge">{{totalCount ? ('已选 ' + totalCount + ' 份菜品') : '先挑几样招牌菜'}}</text>
+      <text class="hero-badge">{{totalCount ? ('已选 ' + totalCount + ' 份') : '先挑几样招牌菜'}}</text>
     </view>
   </view>
 
@@ -65,42 +65,50 @@
             <view class="dish-head">
               <view class="dish-title-box">
                 <text class="dish-name">{{item.name}}</text>
-                <text class="dish-desc">{{item.description || '精选食材，按桌出餐，支持备注口味。'}}</text>
+                <text class="dish-desc">{{item.description || '精选食材，支持整份或半份灵活下单。'}}</text>
               </view>
               <text class="stock-chip {{item.stock > 0 ? '' : 'soldout'}}">{{item.stock > 0 ? ('余量 ' + item.stock) : '已售罄'}}</text>
             </view>
 
             <view class="dish-tags">
               <text class="dish-tag">{{item.image ? '门店实拍' : '铜锅推荐'}}</text>
-              <text class="dish-tag">{{item.stock > 0 ? '支持下单' : '暂不可下单'}}</text>
+              <text class="dish-tag">{{item.supportsHalf ? '支持半份' : '仅整份'}}</text>
             </view>
 
-            <view class="dish-foot">
-              <view class="dish-price-box">
-                <text class="dish-price-symbol">¥</text>
-                <text class="dish-price">{{item.priceText}}</text>
-                <text class="dish-price-unit">/份</text>
-              </view>
-              <view class="stepper">
-                <button
-                  wx:if="{{item.cartQty > 0}}"
-                  class="stepper-button subtle"
-                  data-id="{{item.id}}"
-                  data-delta="-1"
-                  bindtap="changeQty"
-                >
-                  -
-                </button>
-                <text wx:if="{{item.cartQty > 0}}" class="stepper-count">{{item.cartQty}}</text>
-                <button
-                  class="stepper-button"
-                  data-id="{{item.id}}"
-                  data-delta="1"
-                  bindtap="changeQty"
-                  disabled="{{item.stock <= item.cartQty}}"
-                >
-                  +
-                </button>
+            <view class="portion-list">
+              <view wx:for="{{item.portionOptions}}" wx:key="portionType" wx:for-item="option" class="portion-row {{option.portionType === 'HALF' ? 'half' : ''}}">
+                <view class="portion-copy">
+                  <view class="portion-title-line">
+                    <text class="portion-label">{{option.label}}</text>
+                    <view class="portion-price-box">
+                      <text class="dish-price-symbol">¥</text>
+                      <text class="portion-price">{{option.priceText}}</text>
+                    </view>
+                  </view>
+                  <text class="portion-hint">{{option.portionType === 'HALF' ? '适合少量加菜或尝鲜' : '标准份量'}}</text>
+                </view>
+                <view class="stepper">
+                  <view
+                    wx:if="{{option.cartQty > 0}}"
+                    class="stepper-button subtle"
+                    data-id="{{item.id}}"
+                    data-portion="{{option.portionType}}"
+                    data-delta="-1"
+                    bindtap="changeQty"
+                  >
+                    -
+                  </view>
+                  <text wx:if="{{option.cartQty > 0}}" class="stepper-count">{{option.cartQty}}</text>
+                  <view
+                    class="stepper-button {{option.addDisabled ? 'disabled' : ''}}"
+                    data-id="{{item.id}}"
+                    data-portion="{{option.portionType}}"
+                    data-delta="1"
+                    bindtap="changeQty"
+                  >
+                    +
+                  </view>
+                </view>
               </view>
             </view>
           </view>
@@ -133,16 +141,17 @@
     </view>
 
     <scroll-view scroll-y class="cart-scroll">
-      <view wx:for="{{cartItems}}" wx:key="id" class="cart-item">
+      <view wx:for="{{cartItems}}" wx:key="cartKey" class="cart-item">
         <view class="cart-item-main">
           <view class="cart-item-copy">
-            <text class="cart-item-name">{{item.name}}</text>
+            <text class="cart-item-name">{{item.displayName}}</text>
+            <text class="cart-item-meta">{{item.portionLabel}} · ¥{{item.priceText}} / 份</text>
             <text class="cart-item-price">¥{{item.subtotalText}}</text>
           </view>
           <view class="cart-item-actions">
-            <button class="stepper-button subtle" data-id="{{item.id}}" data-delta="-1" bindtap="changeQty">-</button>
+            <view class="stepper-button subtle" data-id="{{item.dishId}}" data-portion="{{item.portionType}}" data-delta="-1" bindtap="changeQty">-</view>
             <text class="stepper-count">{{item.qty}}</text>
-            <button class="stepper-button" data-id="{{item.id}}" data-delta="1" bindtap="changeQty">+</button>
+            <view class="stepper-button" data-id="{{item.dishId}}" data-portion="{{item.portionType}}" data-delta="1" bindtap="changeQty">+</view>
           </view>
         </view>
       </view>

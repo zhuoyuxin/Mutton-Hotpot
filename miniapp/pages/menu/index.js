@@ -4,6 +4,17 @@ const { getTableDetail } = require('../../api/table')
 const { ensureCustomerLogin, getCustomerProfile } = require('../../utils/auth')
 const { extractTableId } = require('../../utils/table-route')
 const { formatPrice, maskPhone } = require('../../utils/format')
+const {
+  PORTION_FULL,
+  PORTION_HALF,
+  buildDishDisplayName,
+  createCartKey,
+  getPortionLabel,
+  getPortionPrice,
+  normalizePortionType,
+  parseCartKey,
+  supportsHalfPortion
+} = require('../../utils/portion')
 
 function showToast(title) {
   wx.showToast({
@@ -11,6 +22,60 @@ function showToast(title) {
     icon: 'none',
     duration: 2200
   })
+}
+
+function getDishSelectedQty(cart, dishId) {
+  return Object.keys(cart).reduce((sum, cartKey) => {
+    const parsed = parseCartKey(cartKey)
+    if (parsed.dishId !== Number(dishId)) {
+      return sum
+    }
+    return sum + Number(cart[cartKey] || 0)
+  }, 0)
+}
+
+function getCartQty(cart, dishId, portionType) {
+  return Number(cart[createCartKey(dishId, portionType)] || 0)
+}
+
+function normalizeSavedCart(savedCart) {
+  const nextCart = {}
+  Object.keys(savedCart || {}).forEach((cartKey) => {
+    const parsed = parseCartKey(cartKey)
+    const quantity = Number(savedCart[cartKey] || 0)
+    if (parsed.dishId > 0 && quantity > 0) {
+      nextCart[createCartKey(parsed.dishId, parsed.portionType)] = quantity
+    }
+  })
+  return nextCart
+}
+
+function buildPortionOptions(dish, cart) {
+  const totalSelectedQty = getDishSelectedQty(cart, dish.id)
+  const options = [
+    {
+      portionType: PORTION_FULL,
+      label: '整份',
+      price: Number(dish.price || 0),
+      priceText: formatPrice(dish.price),
+      cartQty: getCartQty(cart, dish.id, PORTION_FULL)
+    }
+  ]
+
+  if (supportsHalfPortion(dish)) {
+    options.push({
+      portionType: PORTION_HALF,
+      label: '半份',
+      price: Number(dish.halfPrice || 0),
+      priceText: formatPrice(dish.halfPrice),
+      cartQty: getCartQty(cart, dish.id, PORTION_HALF)
+    })
+  }
+
+  return options.map((option) => ({
+    ...option,
+    addDisabled: Number(dish.stock || 0) <= totalSelectedQty
+  }))
 }
 
 Page({
@@ -134,15 +199,17 @@ Page({
       })
       .map((dish) => ({
         ...dish,
-        priceText: formatPrice(dish.price),
-        cartQty: Number(cart[dish.id] || 0)
+        supportsHalf: supportsHalfPortion(dish),
+        totalCartQty: getDishSelectedQty(cart, dish.id),
+        portionOptions: buildPortionOptions(dish, cart)
       }))
 
     this.setData({ dishes })
   },
 
   loadCart(tableId) {
-    const cart = wx.getStorageSync(`cart_${tableId}`) || {}
+    const savedCart = wx.getStorageSync(`cart_${tableId}`) || {}
+    const cart = normalizeSavedCart(savedCart)
     this.setData({ cart }, () => {
       this.buildCartSummary()
       this.applyFilters()
@@ -156,29 +223,31 @@ Page({
   changeQty(event) {
     const dishId = Number(event.currentTarget.dataset.id)
     const delta = Number(event.currentTarget.dataset.delta)
+    const portionType = normalizePortionType(event.currentTarget.dataset.portion)
     const dish = this.data.allDishes.find((item) => item.id === dishId)
 
     if (!dish) {
       return
     }
 
-    const current = Number(this.data.cart[dishId] || 0)
-    const next = current + delta
+    const cartKey = createCartKey(dishId, portionType)
+    const currentQty = Number(this.data.cart[cartKey] || 0)
+    const nextQty = currentQty + delta
 
-    if (next < 0) {
+    if (nextQty < 0) {
       return
     }
 
-    if (delta > 0 && next > Number(dish.stock || 0)) {
+    if (delta > 0 && getDishSelectedQty(this.data.cart, dishId) >= Number(dish.stock || 0)) {
       showToast('已达到当前库存上限')
       return
     }
 
     const cart = { ...this.data.cart }
-    if (next === 0) {
-      delete cart[dishId]
+    if (nextQty === 0) {
+      delete cart[cartKey]
     } else {
-      cart[dishId] = next
+      cart[cartKey] = nextQty
     }
 
     this.setData({ cart }, () => {
@@ -191,19 +260,27 @@ Page({
   buildCartSummary() {
     const { cart, allDishes } = this.data
     const cartItems = Object.keys(cart)
-      .map((dishId) => {
-        const dish = allDishes.find((item) => item.id === Number(dishId))
-        const qty = Number(cart[dishId] || 0)
+      .map((cartKey) => {
+        const parsed = parseCartKey(cartKey)
+        const dish = allDishes.find((item) => item.id === parsed.dishId)
+        const qty = Number(cart[cartKey] || 0)
         if (!dish || qty <= 0) {
           return null
         }
+
+        const price = getPortionPrice(dish, parsed.portionType)
         return {
+          cartKey,
           id: dish.id,
+          dishId: dish.id,
           name: dish.name,
-          price: dish.price,
-          priceText: formatPrice(dish.price),
+          displayName: buildDishDisplayName(dish.name, parsed.portionType),
+          portionType: parsed.portionType,
+          portionLabel: getPortionLabel(parsed.portionType),
+          price,
+          priceText: formatPrice(price),
           qty,
-          subtotalText: formatPrice(Number(dish.price || 0) * qty)
+          subtotalText: formatPrice(price * qty)
         }
       })
       .filter(Boolean)
@@ -237,8 +314,9 @@ Page({
 
   async submitOrder() {
     const items = this.data.cartItems.map((item) => ({
-      dishId: item.id,
-      quantity: item.qty
+      dishId: item.dishId,
+      quantity: item.qty,
+      portionType: item.portionType
     }))
 
     if (!items.length) {

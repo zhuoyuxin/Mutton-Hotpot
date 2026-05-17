@@ -1,6 +1,7 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.constant.PortionType;
 import com.tongguo.dto.CheckoutHistoryDTO;
 import com.tongguo.dto.CustomerConsumptionDTO;
 import com.tongguo.dto.DishSummaryDTO;
@@ -458,13 +459,16 @@ public class SessionService {
     }
 
     private List<DishSummaryDTO> buildDishSummary(List<OrderItem> items) {
-        Map<Integer, DishSummaryDTO> summaryByDish = new LinkedHashMap<>();
+        Map<String, DishSummaryDTO> summaryByDish = new LinkedHashMap<>();
         for (OrderItem item : items) {
-            DishSummaryDTO summary = summaryByDish.computeIfAbsent(item.getDishId(), key -> {
+            String portionType = PortionType.normalizeStored(item.getPortionType());
+            String summaryKey = item.getDishId() + "|" + portionType + "|" + item.getDishPrice() + "|" + item.getDishName();
+            DishSummaryDTO summary = summaryByDish.computeIfAbsent(summaryKey, key -> {
                 DishSummaryDTO dto = new DishSummaryDTO();
                 dto.setDishId(item.getDishId());
                 dto.setDishName(item.getDishName());
                 dto.setDishPrice(item.getDishPrice());
+                dto.setPortionType(portionType);
                 dto.setQuantity(0);
                 dto.setAmount(0);
                 return dto;

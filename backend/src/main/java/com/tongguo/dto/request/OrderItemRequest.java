@@ -6,4 +6,5 @@ import lombok.Data;
 public class OrderItemRequest {
     private Integer dishId;
     private Integer quantity;
+    private String portionType;
 }

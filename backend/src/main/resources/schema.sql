@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS dish (
     category_id INTEGER,
     name TEXT NOT NULL,
     price INTEGER NOT NULL,
+    allow_half_portion INTEGER DEFAULT 0,
+    half_price INTEGER,
     image TEXT,
     description TEXT,
     status INTEGER DEFAULT 1,
@@ -88,6 +90,7 @@ CREATE TABLE IF NOT EXISTS order_item (
     dish_id INTEGER NOT NULL,
     dish_name TEXT NOT NULL,
     dish_price INTEGER NOT NULL,
+    portion_type TEXT NOT NULL DEFAULT 'FULL',
     quantity INTEGER NOT NULL,
     status INTEGER DEFAULT 0,
     create_time DATETIME DEFAULT (datetime('now','localtime'))

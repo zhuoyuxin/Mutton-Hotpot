@@ -1,40 +1,84 @@
 <template>
   <div class="customer-page">
-    <!-- 分类标签 -->
     <div class="category-tabs">
       <span
-        v-for="cat in categories" :key="cat.id"
+        v-for="cat in categories"
+        :key="cat.id"
         :class="['tab-item', { active: activeCategory === cat.id }]"
         @click="activeCategory = cat.id"
       >{{ cat.name }}</span>
     </div>
 
-    <!-- 菜品列表 -->
     <div class="dish-list" v-loading="loading">
       <div v-for="dish in filteredDishes" :key="dish.id" class="dish-card">
-        <img v-if="dish.image" :src="dish.image" class="dish-img" loading="lazy" :alt="dish.name" @error="$event.target.style.display='none'" />
+        <img
+          v-if="dish.image"
+          :src="dish.image"
+          class="dish-img"
+          loading="lazy"
+          :alt="dish.name"
+          @error="$event.target.style.display='none'"
+        />
         <div class="dish-info">
-          <div class="dish-name">{{ dish.name }}</div>
-          <div class="dish-desc">{{ dish.description }}</div>
-          <div class="dish-bottom">
-            <span class="dish-price">&yen;{{ formatPrice(dish.price) }}</span>
-            <div class="dish-qty">
-              <el-button v-if="cart[dish.id]" size="small" circle @click="changeQty(dish.id, -1)">-</el-button>
-              <span v-if="cart[dish.id]" class="qty-num">{{ cart[dish.id] }}</span>
-              <el-button
-                size="small"
-                circle
-                type="danger"
-                :disabled="dish.stock <= 0 || (cart[dish.id] || 0) >= dish.stock"
-                @click="changeQty(dish.id, 1)"
-              >+</el-button>
+          <div>
+            <div class="dish-name-row">
+              <div class="dish-name">{{ dish.name }}</div>
+              <span v-if="supportsHalf(dish)" class="half-badge">支持半份</span>
+            </div>
+            <div class="dish-desc">{{ dish.description || '现点现做，可在下单后备注口味。' }}</div>
+          </div>
+
+          <div class="portion-list">
+            <div class="portion-row">
+              <div class="portion-main">
+                <span class="portion-label">整份</span>
+                <span class="dish-price">&yen;{{ formatPrice(dish.price) }}</span>
+              </div>
+              <div class="dish-qty">
+                <el-button
+                  v-if="getCartQty(dish.id, PORTION_FULL)"
+                  size="small"
+                  circle
+                  @click="changeQty(dish, PORTION_FULL, -1)"
+                >-</el-button>
+                <span v-if="getCartQty(dish.id, PORTION_FULL)" class="qty-num">{{ getCartQty(dish.id, PORTION_FULL) }}</span>
+                <el-button
+                  size="small"
+                  circle
+                  type="danger"
+                  :disabled="getDishSelectedQty(dish.id) >= Number(dish.stock || 0)"
+                  @click="changeQty(dish, PORTION_FULL, 1)"
+                >+</el-button>
+              </div>
+            </div>
+
+            <div v-if="supportsHalf(dish)" class="portion-row portion-row-half">
+              <div class="portion-main">
+                <span class="portion-label">半份</span>
+                <span class="dish-price">&yen;{{ formatPrice(dish.halfPrice) }}</span>
+              </div>
+              <div class="dish-qty">
+                <el-button
+                  v-if="getCartQty(dish.id, PORTION_HALF)"
+                  size="small"
+                  circle
+                  @click="changeQty(dish, PORTION_HALF, -1)"
+                >-</el-button>
+                <span v-if="getCartQty(dish.id, PORTION_HALF)" class="qty-num">{{ getCartQty(dish.id, PORTION_HALF) }}</span>
+                <el-button
+                  size="small"
+                  circle
+                  type="danger"
+                  :disabled="getDishSelectedQty(dish.id) >= Number(dish.stock || 0)"
+                  @click="changeQty(dish, PORTION_HALF, 1)"
+                >+</el-button>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 底部购物车 -->
     <div class="cart-bar">
       <div class="cart-info" @click="showCartDetail = !showCartDetail">
         <el-badge :value="totalCount" :hidden="totalCount === 0" type="danger">
@@ -47,20 +91,21 @@
       </el-button>
     </div>
 
-    <!-- 购物车详情弹窗 -->
-    <el-drawer v-model="showCartDetail" title="购物车" direction="btt" size="50%">
-      <div v-for="item in cartItems" :key="item.dishId" style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee">
-        <span>{{ item.name }}</span>
-        <div>
-          <el-button size="small" circle @click="changeQty(item.dishId, -1)">-</el-button>
-          <span style="margin:0 8px">{{ item.qty }}</span>
+    <el-drawer v-model="showCartDetail" title="购物车" direction="btt" size="52%">
+      <div v-for="item in cartItems" :key="item.cartKey" class="cart-item">
+        <div class="cart-item-main">
+          <span>{{ item.displayName }}</span>
+          <span class="cart-item-price">&yen;{{ formatPrice(item.price * item.qty) }}</span>
+        </div>
+        <div class="dish-qty">
+          <el-button size="small" circle @click="changeQty(item.dish, item.portionType, -1)">-</el-button>
+          <span class="qty-num">{{ item.qty }}</span>
           <el-button
             size="small"
             circle
-            :disabled="currentDishStock(item.dishId) <= item.qty"
-            @click="changeQty(item.dishId, 1)"
+            :disabled="getDishSelectedQty(item.dishId) >= Number(item.dish.stock || 0)"
+            @click="changeQty(item.dish, item.portionType, 1)"
           >+</el-button>
-          <span style="margin-left:10px; color:#f56c6c">&yen;{{ formatPrice(item.price * item.qty) }}</span>
         </div>
       </div>
     </el-drawer>
@@ -75,6 +120,16 @@ import { ShoppingCart } from '@element-plus/icons-vue'
 import { customerList } from '../../api/dish'
 import { customerCreate } from '../../api/order'
 import { formatPrice } from '../../utils/format'
+import {
+  PORTION_FULL,
+  PORTION_HALF,
+  buildDishDisplayName,
+  createCartKey,
+  getPortionPrice,
+  normalizePortionType,
+  parseCartKey,
+  supportsHalfPortion
+} from '../../utils/portion'
 
 const route = useRoute()
 const router = useRouter()
@@ -89,25 +144,48 @@ const showCartDetail = ref(false)
 const loading = ref(false)
 
 const filteredDishes = computed(() => {
-  if (activeCategory.value === 0) return dishes.value
-  return dishes.value.filter(d => d.categoryId === activeCategory.value)
+  if (activeCategory.value === 0) {
+    return dishes.value
+  }
+  return dishes.value.filter((dish) => dish.categoryId === activeCategory.value)
 })
 
 const cartItems = computed(() => {
   return Object.entries(cart)
-    .filter(([, qty]) => qty > 0)
-    .map(([dishId, qty]) => {
-      const dish = dishes.value.find(d => d.id === Number(dishId))
-      return { dishId: Number(dishId), name: dish?.name, price: dish?.price || 0, qty }
+    .filter(([, qty]) => Number(qty) > 0)
+    .map(([cartKey, qty]) => {
+      const parsed = parseCartKey(cartKey)
+      const dish = dishes.value.find((item) => item.id === parsed.dishId)
+      if (!dish) {
+        return null
+      }
+      return {
+        cartKey,
+        dishId: dish.id,
+        dish,
+        portionType: parsed.portionType,
+        displayName: buildDishDisplayName(dish.name, parsed.portionType),
+        price: getPortionPrice(dish, parsed.portionType),
+        qty: Number(qty)
+      }
     })
+    .filter(Boolean)
 })
 
-const totalCount = computed(() => Object.values(cart).reduce((s, q) => s + q, 0))
-const totalPrice = computed(() => cartItems.value.reduce((s, i) => s + i.price * i.qty, 0))
+const totalCount = computed(() => cartItems.value.reduce((sum, item) => sum + item.qty, 0))
+const totalPrice = computed(() => cartItems.value.reduce((sum, item) => sum + item.price * item.qty, 0))
+
+const supportsHalf = (dish) => supportsHalfPortion(dish)
 
 const resetCart = () => {
-  Object.keys(cart).forEach(key => delete cart[key])
+  Object.keys(cart).forEach((key) => delete cart[key])
 }
+
+const getCartQty = (dishId, portionType) => Number(cart[createCartKey(dishId, portionType)] || 0)
+
+const getDishSelectedQty = (dishId) => Object.entries(cart)
+  .filter(([cartKey]) => parseCartKey(cartKey).dishId === Number(dishId))
+  .reduce((sum, [, qty]) => sum + Number(qty || 0), 0)
 
 const loadCart = (targetTableId) => {
   resetCart()
@@ -116,28 +194,37 @@ const loadCart = (targetTableId) => {
     return
   }
   try {
-    Object.assign(cart, JSON.parse(savedCart))
-  } catch (e) {
+    const parsedCart = JSON.parse(savedCart)
+    Object.entries(parsedCart || {}).forEach(([key, qty]) => {
+      const parsed = parseCartKey(key)
+      if (parsed.dishId > 0 && Number(qty) > 0) {
+        cart[createCartKey(parsed.dishId, parsed.portionType)] = Number(qty)
+      }
+    })
+  } catch (error) {
     localStorage.removeItem('cart_' + targetTableId)
   }
 }
 
-const currentDishStock = (dishId) => {
-  const dish = dishes.value.find(d => d.id === Number(dishId))
-  return dish?.stock || 0
-}
+const changeQty = (dish, portionType, delta) => {
+  if (!dish) {
+    return
+  }
 
-const changeQty = (dishId, delta) => {
-  const newVal = (cart[dishId] || 0) + delta
-  if (newVal < 0) return
-  if (delta > 0 && newVal > currentDishStock(dishId)) {
+  const cartKey = createCartKey(dish.id, portionType)
+  const nextQty = getCartQty(dish.id, portionType) + delta
+  if (nextQty < 0) {
+    return
+  }
+  if (delta > 0 && getDishSelectedQty(dish.id) >= Number(dish.stock || 0)) {
     ElMessage.warning('已达到当前库存上限')
     return
   }
-  if (newVal === 0) {
-    delete cart[dishId]
+
+  if (nextQty === 0) {
+    delete cart[cartKey]
   } else {
-    cart[dishId] = newVal
+    cart[cartKey] = nextQty
   }
 }
 
@@ -145,8 +232,7 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await customerList()
-    dishes.value = res.data.dishes || res.data
-    // 使用后端返回的分类数据
+    dishes.value = (res.data.dishes || res.data || []).filter((dish) => dish.status === 1)
     const cats = res.data.categories || []
     categories.value = [{ id: 0, name: '全部' }, ...cats]
   } finally {
@@ -155,8 +241,14 @@ const loadData = async () => {
 }
 
 const handleSubmit = async () => {
-  const items = cartItems.value.map(i => ({ dishId: i.dishId, quantity: i.qty }))
-  if (items.length === 0) return
+  const items = cartItems.value.map((item) => ({
+    dishId: item.dishId,
+    quantity: item.qty,
+    portionType: normalizePortionType(item.portionType)
+  }))
+  if (items.length === 0) {
+    return
+  }
 
   submitting.value = true
   try {
@@ -168,7 +260,7 @@ const handleSubmit = async () => {
       remark: ''
     })
     ElMessage.success('下单成功')
-    Object.keys(cart).forEach(k => delete cart[k])
+    resetCart()
     localStorage.removeItem('cart_' + tableId.value)
     router.push('/c/status/' + tableId.value)
   } finally {
@@ -181,8 +273,8 @@ onMounted(() => {
   loadCart(tableId.value)
 })
 
-watch(cart, (val) => {
-  localStorage.setItem('cart_' + tableId.value, JSON.stringify(val))
+watch(cart, (value) => {
+  localStorage.setItem('cart_' + tableId.value, JSON.stringify(value))
 }, { deep: true })
 
 watch(tableId, (newTableId, oldTableId) => {
@@ -196,28 +288,186 @@ watch(tableId, (newTableId, oldTableId) => {
 </script>
 
 <style scoped>
-.customer-page { min-height: 100vh; background: #f5f5f5; padding-bottom: 70px; }
-.category-tabs {
-  display: flex; overflow-x: auto; background: #fff; padding: calc(10px + var(--safe-top, 0px)) 10px 10px;
-  position: sticky; top: 0; z-index: 10; gap: 10px;
+.customer-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding-bottom: 70px;
 }
-.tab-item { white-space: nowrap; padding: 10px 16px; border-radius: 20px; font-size: 14px; color: #666; cursor: pointer; }
-.tab-item.active { background: #f56c6c; color: #fff; }
-.dish-list { padding: 10px; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
-.dish-card { display: flex; background: #fff; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
-.dish-img { width: 100px; height: 100px; object-fit: cover; }
-.dish-info { flex: 1; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
-.dish-name { font-size: 16px; font-weight: 500; }
-.dish-desc { font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dish-bottom { display: flex; justify-content: space-between; align-items: center; }
-.dish-price { color: #f56c6c; font-size: 16px; font-weight: 500; }
-.dish-qty { display: flex; align-items: center; gap: 6px; }
+
+.category-tabs {
+  display: flex;
+  overflow-x: auto;
+  background: #fff;
+  padding: calc(10px + var(--safe-top, 0px)) 10px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 10px;
+}
+
+.tab-item {
+  white-space: nowrap;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+}
+
+.tab-item.active {
+  background: #f56c6c;
+  color: #fff;
+}
+
+.dish-list {
+  padding: 10px;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
+}
+
+.dish-card {
+  display: flex;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.dish-img {
+  width: 108px;
+  height: 128px;
+  object-fit: cover;
+}
+
+.dish-info {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dish-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dish-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.half-badge {
+  font-size: 12px;
+  color: #d35400;
+  background: #fff2e8;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.dish-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+
+.portion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #faf7f3;
+}
+
+.portion-row-half {
+  background: #fff7ef;
+}
+
+.portion-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portion-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.dish-price {
+  color: #f56c6c;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dish-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qty-num {
+  min-width: 18px;
+  text-align: center;
+}
+
 .cart-bar {
-  position: fixed; bottom: 0; left: 0; right: 0; min-height: 60px;
-  background: #333; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: 60px;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
   z-index: 100;
 }
-.cart-info { display: flex; align-items: center; gap: 10px; color: #fff; cursor: pointer; }
-.cart-total { font-size: 18px; font-weight: 500; color: #fff; }
+
+.cart-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.cart-total {
+  font-size: 18px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.cart-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cart-item-price {
+  color: #f56c6c;
+  font-size: 13px;
+}
 </style>

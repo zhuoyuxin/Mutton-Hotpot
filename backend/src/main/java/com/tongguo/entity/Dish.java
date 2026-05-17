@@ -17,6 +17,10 @@ public class Dish {
     private String description;
     private Integer status;
     private Integer stock;
+    @TableField("allow_half_portion")
+    private Integer allowHalfPortion;
+    @TableField("half_price")
+    private Integer halfPrice;
     @TableField("sort_order")
     private Integer sortOrder;
     @TableField("create_time")

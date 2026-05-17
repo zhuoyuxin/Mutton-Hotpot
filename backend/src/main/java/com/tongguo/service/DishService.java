@@ -38,14 +38,8 @@ public class DishService {
         }
 
         Dish dish = new Dish();
-        dish.setCategoryId(toRequiredPositiveInt(request.getCategoryId(), "分类ID"));
-        dish.setName(toRequiredText(request.getName(), "菜品名称"));
-        dish.setPrice(yuanToFen(request.getPrice(), true));
-        dish.setImage(toNullableText(request.getImage()));
-        dish.setDescription(toNullableText(request.getDescription()));
+        applyEditableFields(dish, request);
         dish.setStatus(1);
-        dish.setStock(toOptionalNonNegativeInt(request.getStock(), 0, "库存"));
-        dish.setSortOrder(toOptionalNonNegativeInt(request.getSortOrder(), 0, "排序"));
         dishMapper.insert(dish);
     }
 
@@ -60,13 +54,7 @@ public class DishService {
             throw new IllegalArgumentException("菜品不存在");
         }
 
-        dish.setCategoryId(toRequiredPositiveInt(request.getCategoryId(), "分类ID"));
-        dish.setName(toRequiredText(request.getName(), "菜品名称"));
-        dish.setPrice(yuanToFen(request.getPrice(), true));
-        dish.setImage(toNullableText(request.getImage()));
-        dish.setDescription(toNullableText(request.getDescription()));
-        dish.setStock(toOptionalNonNegativeInt(request.getStock(), 0, "库存"));
-        dish.setSortOrder(toOptionalNonNegativeInt(request.getSortOrder(), 0, "排序"));
+        applyEditableFields(dish, request);
         dish.setUpdateTime(LocalDateTime.now());
         dishMapper.updateById(dish);
     }
@@ -92,6 +80,34 @@ public class DishService {
         dish.setStock(newStock);
         dish.setUpdateTime(LocalDateTime.now());
         dishMapper.updateById(dish);
+    }
+
+    private void applyEditableFields(Dish dish, DishSaveRequest request) {
+        dish.setCategoryId(toRequiredPositiveInt(request.getCategoryId(), "分类ID"));
+        dish.setName(toRequiredText(request.getName(), "菜品名称"));
+
+        Integer fullPrice = yuanToFen(request.getPrice(), true);
+        dish.setPrice(fullPrice);
+
+        boolean allowHalfPortion = Boolean.TRUE.equals(request.getAllowHalfPortion());
+        dish.setAllowHalfPortion(allowHalfPortion ? 1 : 0);
+        if (allowHalfPortion) {
+            Integer halfPrice = yuanToFen(request.getHalfPrice(), true);
+            if (halfPrice <= 0) {
+                throw new IllegalArgumentException("半份价格必须大于0");
+            }
+            if (halfPrice > fullPrice) {
+                throw new IllegalArgumentException("半份价格不能高于整份价格");
+            }
+            dish.setHalfPrice(halfPrice);
+        } else {
+            dish.setHalfPrice(null);
+        }
+
+        dish.setImage(toNullableText(request.getImage()));
+        dish.setDescription(toNullableText(request.getDescription()));
+        dish.setStock(toOptionalNonNegativeInt(request.getStock(), 0, "库存"));
+        dish.setSortOrder(toOptionalNonNegativeInt(request.getSortOrder(), 0, "排序"));
     }
 
     private Integer yuanToFen(BigDecimal yuan, boolean required) {

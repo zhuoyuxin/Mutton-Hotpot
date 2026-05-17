@@ -181,14 +181,53 @@
   line-height: 44rpx;
 }
 
-.dish-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 22rpx;
+.portion-list {
+  margin-top: 20rpx;
 }
 
-.dish-price-box {
+.portion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18rpx;
+  padding: 18rpx 20rpx;
+  margin-top: 12rpx;
+  border-radius: 22rpx;
+  background-color: rgba(141, 94, 59, 0.06);
+}
+
+.portion-row.half {
+  background-color: rgba(221, 146, 77, 0.12);
+}
+
+.portion-copy {
+  flex: 1;
+  min-width: 0;
+  padding-right: 8rpx;
+}
+
+.portion-title-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10rpx;
+}
+
+.portion-label {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #2c1a16;
+  white-space: nowrap;
+}
+
+.portion-hint {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a6b5d;
+}
+
+.portion-price-box {
   display: flex;
   align-items: baseline;
   color: #ab4528;
@@ -199,8 +238,8 @@
   margin-right: 4rpx;
 }
 
-.dish-price {
-  font-size: 38rpx;
+.portion-price {
+  font-size: 34rpx;
   font-weight: 700;
 }
 
@@ -213,12 +252,17 @@
 .stepper {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  min-width: 166rpx;
+  gap: 12rpx;
 }
 
 .stepper-button {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 64rpx;
   width: 64rpx;
   height: 64rpx;
   border-radius: 50%;
@@ -226,9 +270,10 @@
   color: #fff6eb;
   font-size: 34rpx;
   font-weight: 700;
+  line-height: 1;
 }
 
-.stepper-button[disabled] {
+.stepper-button.disabled {
   opacity: 0.38;
 }
 
@@ -239,8 +284,7 @@
 }
 
 .stepper-count {
-  min-width: 30rpx;
-  margin: 0 10rpx;
+  min-width: 26rpx;
   text-align: center;
   font-size: 28rpx;
   font-weight: 700;
@@ -352,7 +396,7 @@
 .cart-item-main {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .cart-item-copy {
@@ -373,7 +417,16 @@
   color: #9f5a34;
 }
 
+.cart-item-meta {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8c6a59;
+}
+
 .cart-item-actions {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
+  margin-left: 18rpx;
 }

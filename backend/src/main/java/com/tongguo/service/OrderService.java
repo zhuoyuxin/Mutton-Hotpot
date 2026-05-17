@@ -1,6 +1,7 @@
 package com.tongguo.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tongguo.constant.PortionType;
 import com.tongguo.dto.request.OrderItemRequest;
 import com.tongguo.entity.Customer;
 import com.tongguo.entity.DiningSession;
@@ -87,6 +88,7 @@ public class OrderService {
         for (OrderItemRequest item : items) {
             Integer dishId = toRequiredInt(item == null ? null : item.getDishId(), "Dish id");
             Integer quantity = toRequiredInt(item == null ? null : item.getQuantity(), "Dish quantity");
+            String portionType = PortionType.normalize(item == null ? null : item.getPortionType());
             if (quantity <= 0) {
                 throw new IllegalArgumentException("Dish quantity must be greater than 0");
             }
@@ -99,9 +101,16 @@ public class OrderService {
                 throw new IllegalArgumentException("Dish is no longer on sale, please refresh and retry");
             }
 
+            int unitPrice = resolveOrderItemPrice(dish, portionType);
             requestedQtyByDishId.merge(dishId, quantity, Integer::sum);
-            pendingItems.add(new PendingOrderItem(dish, quantity));
-            totalAmount += dish.getPrice() * quantity;
+            pendingItems.add(new PendingOrderItem(
+                    dish,
+                    quantity,
+                    portionType,
+                    unitPrice,
+                    buildSnapshotDishName(dish, portionType)
+            ));
+            totalAmount += unitPrice * quantity;
         }
 
         validateSellableStock(requestedQtyByDishId, pendingItems);
@@ -127,8 +136,9 @@ public class OrderService {
             OrderItem orderItem = new OrderItem();
             orderItem.setOrderId(order.getId());
             orderItem.setDishId(pendingItem.dish.getId());
-            orderItem.setDishName(pendingItem.dish.getName());
-            orderItem.setDishPrice(pendingItem.dish.getPrice());
+            orderItem.setDishName(pendingItem.snapshotDishName);
+            orderItem.setDishPrice(pendingItem.unitPrice);
+            orderItem.setPortionType(pendingItem.portionType);
             orderItem.setQuantity(pendingItem.quantity);
             orderItem.setStatus(0);
             orderItemMapper.insert(orderItem);
@@ -385,10 +395,30 @@ public class OrderService {
         servedItem.setDishId(item.getDishId());
         servedItem.setDishName(item.getDishName());
         servedItem.setDishPrice(item.getDishPrice());
+        servedItem.setPortionType(item.getPortionType());
         servedItem.setQuantity(serveQuantity);
         servedItem.setStatus(2);
         orderItemMapper.insert(servedItem);
         return servedItem;
+    }
+
+    private int resolveOrderItemPrice(Dish dish, String portionType) {
+        if (!PortionType.isHalf(portionType)) {
+            return toRequiredInt(dish.getPrice(), "Dish price");
+        }
+
+        if (!Objects.equals(dish.getAllowHalfPortion(), 1)) {
+            throw new IllegalArgumentException("Dish does not support half portion");
+        }
+        Integer halfPrice = dish.getHalfPrice();
+        if (halfPrice == null || halfPrice <= 0) {
+            throw new IllegalArgumentException("Dish half portion price is invalid");
+        }
+        return halfPrice;
+    }
+
+    private String buildSnapshotDishName(Dish dish, String portionType) {
+        return dish.getName() + PortionType.displaySuffix(portionType);
     }
 
     private OrderItem resolveServeItemRace(Integer itemId, Integer expectedQuantity) {
@@ -555,10 +585,16 @@ public class OrderService {
     private static final class PendingOrderItem {
         private final Dish dish;
         private final int quantity;
+        private final String portionType;
+        private final int unitPrice;
+        private final String snapshotDishName;
 
-        private PendingOrderItem(Dish dish, int quantity) {
+        private PendingOrderItem(Dish dish, int quantity, String portionType, int unitPrice, String snapshotDishName) {
             this.dish = dish;
             this.quantity = quantity;
+            this.portionType = portionType;
+            this.unitPrice = unitPrice;
+            this.snapshotDishName = snapshotDishName;
         }
     }
 }
