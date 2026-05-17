@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tongguo.entity.Customer;
 import com.tongguo.entity.PointsRecord;
 import com.tongguo.mapper.CustomerMapper;
+import com.tongguo.mapper.OrdersMapper;
 import com.tongguo.mapper.PointsRecordMapper;
+import com.tongguo.mapper.SessionCheckoutMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,12 @@ public class CustomerService {
 
     @Autowired
     private PointsRecordMapper pointsRecordMapper;
+
+    @Autowired
+    private OrdersMapper ordersMapper;
+
+    @Autowired
+    private SessionCheckoutMapper sessionCheckoutMapper;
 
     @Transactional
     public Customer findOrCreateByPhone(String phone) {
@@ -139,8 +147,74 @@ public class CustomerService {
         pointsRecordMapper.insert(record);
     }
 
+    @Transactional
+    public Customer bindPhoneToWechatCustomer(Integer currentCustomerId, String phone) {
+        if (currentCustomerId == null) {
+            throw new IllegalArgumentException("顾客信息不存在");
+        }
+
+        String normalizedPhone = normalizeMobilePhone(phone);
+        Customer currentCustomer = customerMapper.selectById(currentCustomerId);
+        if (currentCustomer == null) {
+            throw new IllegalArgumentException("顾客信息不存在");
+        }
+        if (normalizeOptionalText(currentCustomer.getOpenid()) == null) {
+            throw new IllegalArgumentException("当前顾客未使用微信身份登录");
+        }
+
+        String currentPhone = normalizeOptionalText(currentCustomer.getPhone());
+        if (currentPhone != null && !currentPhone.equals(normalizedPhone)) {
+            throw new IllegalArgumentException("当前微信顾客已绑定其他手机号");
+        }
+
+        Customer phoneCustomer = customerMapper.selectOne(
+                new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, normalizedPhone)
+        );
+        if (phoneCustomer == null) {
+            currentCustomer.setPhone(normalizedPhone);
+            customerMapper.updateById(currentCustomer);
+            return customerMapper.selectById(currentCustomerId);
+        }
+        if (phoneCustomer.getId().equals(currentCustomerId)) {
+            return phoneCustomer;
+        }
+
+        if (normalizeOptionalText(phoneCustomer.getOpenid()) != null) {
+            throw new IllegalArgumentException("该手机号已绑定其他微信顾客");
+        }
+
+        phoneCustomer.setPhone(null);
+        customerMapper.updateById(phoneCustomer);
+
+        Integer sourceCustomerId = phoneCustomer.getId();
+        ordersMapper.moveCustomerOrders(sourceCustomerId, currentCustomerId);
+        sessionCheckoutMapper.moveCustomerCheckouts(sourceCustomerId, currentCustomerId);
+        pointsRecordMapper.moveCustomerPoints(sourceCustomerId, currentCustomerId);
+
+        int sourcePoints = phoneCustomer.getPoints() == null ? 0 : phoneCustomer.getPoints();
+        int sourceTotalSpent = phoneCustomer.getTotalSpent() == null ? 0 : phoneCustomer.getTotalSpent();
+        if (sourcePoints != 0 || sourceTotalSpent != 0) {
+            customerMapper.adjustBalances(currentCustomerId, sourcePoints, sourceTotalSpent);
+        }
+
+        currentCustomer = customerMapper.selectById(currentCustomerId);
+        currentCustomer.setPhone(normalizedPhone);
+        customerMapper.updateById(currentCustomer);
+        customerMapper.deleteById(sourceCustomerId);
+
+        return customerMapper.selectById(currentCustomerId);
+    }
+
     public String normalizePhone(String phone) {
         return normalizeRequiredText(phone, "Phone is required");
+    }
+
+    public String normalizeMobilePhone(String phone) {
+        String normalizedPhone = normalizePhone(phone);
+        if (!normalizedPhone.matches("^1[3-9]\\d{9}$")) {
+            throw new IllegalArgumentException("请输入正确的手机号");
+        }
+        return normalizedPhone;
     }
 
     public String normalizeRequiredText(String value, String errorMsg) {

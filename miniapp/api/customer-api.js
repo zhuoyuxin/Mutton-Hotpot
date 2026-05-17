@@ -40,10 +40,19 @@ function customerPoints() {
   })
 }
 
+function bindCustomerPhone(data) {
+  return request({
+    url: '/api/c/customer/bind-phone',
+    method: 'POST',
+    data
+  })
+}
+
 module.exports = {
   customerLogin,
   wechatLogin,
   customerInfo,
   customerOrders,
-  customerPoints
+  customerPoints,
+  bindCustomerPhone
 }

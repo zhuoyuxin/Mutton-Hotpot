@@ -1,4 +1,4 @@
-const { wechatLogin } = require('../api/customer')
+const { wechatLogin } = require('../api/customer-api')
 
 function clearCustomerSession() {
   wx.removeStorageSync('customerToken')

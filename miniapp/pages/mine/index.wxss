@@ -46,6 +46,31 @@
   color: #7f6154;
 }
 
+.bind-card {
+  margin-bottom: 18rpx;
+  padding: 24rpx;
+}
+
+.bind-head {
+  margin-bottom: 14rpx;
+}
+
+.bind-copy {
+  display: block;
+  margin-bottom: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #7f6154;
+}
+
+.bind-button {
+  margin-top: 20rpx;
+}
+
+.bind-button.disabled {
+  opacity: 0.45;
+}
+
 .mine-empty {
   padding: 60rpx 32rpx;
 }

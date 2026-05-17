@@ -4,6 +4,7 @@ import com.tongguo.config.Result;
 import com.tongguo.dto.CustomerDetailDTO;
 import com.tongguo.dto.CustomerAuthDTO;
 import com.tongguo.dto.CustomerInfoDTO;
+import com.tongguo.dto.request.BindCustomerPhoneRequest;
 import com.tongguo.dto.request.CustomerLoginRequest;
 import com.tongguo.dto.request.ManualPointsRequest;
 import com.tongguo.dto.request.WechatLoginRequest;
@@ -94,6 +95,24 @@ public class CustomerController {
             return Result.error(40101, "Please login first");
         }
         return Result.ok(customerService.getPointsRecords(customer.getId()));
+    }
+
+    @PostMapping("/api/c/customer/bind-phone")
+    public Result<CustomerInfoDTO> bindCustomerPhone(@RequestHeader(value = "X-Customer-Token", required = false) String customerToken,
+                                                     @RequestBody BindCustomerPhoneRequest request) {
+        Customer customer = customerAuthService.resolveByToken(customerToken);
+        if (customer == null) {
+            return Result.error(40101, "Please login first");
+        }
+        try {
+            Customer mergedCustomer = customerService.bindPhoneToWechatCustomer(
+                    customer.getId(),
+                    request == null ? null : request.getPhone()
+            );
+            return Result.ok(customerAuthService.toCustomerInfo(mergedCustomer));
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @GetMapping("/api/m/customer/list")

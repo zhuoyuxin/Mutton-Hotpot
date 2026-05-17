@@ -19,4 +19,9 @@ public interface OrdersMapper extends BaseMapper<Orders> {
             "WHERE session_id = #{sessionId}")
     int updateCustomerBySessionId(@Param("sessionId") Integer sessionId,
                                   @Param("customerId") Integer customerId);
+
+    @Update("UPDATE orders SET customer_id = #{targetCustomerId}, update_time = datetime('now','localtime') " +
+            "WHERE customer_id = #{sourceCustomerId}")
+    int moveCustomerOrders(@Param("sourceCustomerId") Integer sourceCustomerId,
+                           @Param("targetCustomerId") Integer targetCustomerId);
 }
