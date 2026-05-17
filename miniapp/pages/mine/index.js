@@ -169,14 +169,14 @@ Page({
 
   goEntry() {
     const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
-    const url = tableId ? `/pages/entry/index?tableId=${tableId}` : '/pages/entry/index'
+    const url = tableId ? `/pages/home/index?tableId=${tableId}` : '/pages/home/index'
     wx.redirectTo({ url })
   },
 
   goMenu() {
     const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
     if (!tableId) {
-      wx.redirectTo({ url: '/pages/entry/index' })
+      wx.redirectTo({ url: '/pages/home/index' })
       return
     }
     wx.redirectTo({ url: `/pages/menu/index?tableId=${tableId}` })
@@ -185,7 +185,7 @@ Page({
   goStatus() {
     const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
     if (!tableId) {
-      wx.redirectTo({ url: '/pages/entry/index' })
+      wx.redirectTo({ url: '/pages/home/index' })
       return
     }
     wx.redirectTo({ url: `/pages/status/index?tableId=${tableId}` })

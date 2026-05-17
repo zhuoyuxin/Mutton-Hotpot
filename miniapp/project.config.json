@@ -1,6 +1,7 @@
 {
   "appid": "wx4b2b6a687b2a78f5",
   "compileType": "miniprogram",
+  "miniprogramRoot": "./",
   "libVersion": "3.6.1",
   "projectname": "tongguo-miniapp",
   "setting": {

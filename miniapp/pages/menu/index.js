@@ -101,7 +101,7 @@ Page({
   onLoad(options) {
     const tableId = extractTableId(options) || Number(wx.getStorageSync('currentTableId') || 0)
     if (!tableId) {
-      wx.redirectTo({ url: '/pages/entry/index' })
+      wx.redirectTo({ url: '/pages/home/index' })
       return
     }
 
@@ -364,7 +364,7 @@ Page({
 
   goEntry() {
     const tableId = this.data.tableId || wx.getStorageSync('currentTableId') || ''
-    const url = tableId ? `/pages/entry/index?tableId=${tableId}` : '/pages/entry/index'
+    const url = tableId ? `/pages/home/index?tableId=${tableId}` : '/pages/home/index'
     wx.redirectTo({ url })
   },
 

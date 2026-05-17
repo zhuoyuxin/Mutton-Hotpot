@@ -23,8 +23,8 @@ function jumpToEntry() {
   redirecting401 = true
   const tableId = wx.getStorageSync('currentTableId')
   const url = tableId
-    ? `/pages/entry/index?tableId=${tableId}`
-    : '/pages/entry/index'
+    ? `/pages/home/index?tableId=${tableId}`
+    : '/pages/home/index'
 
   wx.reLaunch({ url })
   setTimeout(() => {
