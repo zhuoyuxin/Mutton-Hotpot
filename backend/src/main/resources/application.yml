@@ -23,6 +23,10 @@ logging:
   level:
     com.tongguo: debug
 
+checkout:
+  default-self-service-unit-price-fen: ${CHECKOUT_DEFAULT_SELF_SERVICE_UNIT_PRICE_FEN:0}
+  default-tableware-unit-price-fen: ${CHECKOUT_DEFAULT_TABLEWARE_UNIT_PRICE_FEN:0}
+
 wechat:
   miniapp:
     app-id: ${WECHAT_MINIAPP_APP_ID:}

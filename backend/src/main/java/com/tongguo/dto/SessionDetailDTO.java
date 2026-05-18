@@ -11,5 +11,8 @@ public class SessionDetailDTO {
     private DiningSession session;
     private List<Orders> orders;
     private List<DishSummaryDTO> dishSummary;
+    private int dishAmount;
     private int totalAmount;
+    private int defaultSelfServiceUnitPrice;
+    private int defaultTablewareUnitPrice;
 }

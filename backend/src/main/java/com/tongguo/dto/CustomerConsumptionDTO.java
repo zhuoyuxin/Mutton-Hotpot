@@ -13,8 +13,15 @@ public class CustomerConsumptionDTO {
     private String tableName;
     private String tableArea;
     private Integer totalAmount;
+    private Integer dishAmount;
     private Integer actualPaid;
     private Integer discountAmount;
+    private Integer selfServiceCount;
+    private Integer selfServiceUnitPrice;
+    private Integer selfServiceAmount;
+    private Integer tablewareCount;
+    private Integer tablewareUnitPrice;
+    private Integer tablewareAmount;
     private Integer pointsEarned;
     private Integer orderCount;
     private LocalDateTime checkoutTime;

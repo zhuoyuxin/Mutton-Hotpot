@@ -95,6 +95,12 @@
                       <span>{{ record.tableName || '散台' }}</span>
                       <span v-if="record.tableArea" class="muted">/ {{ record.tableArea }}</span>
                       <el-tag size="small" type="success">实收 {{ formatMoney(record.actualPaid) }} 元</el-tag>
+                      <el-tag v-if="record.selfServiceAmount > 0" size="small" type="warning">
+                        自助 {{ formatMoney(record.selfServiceAmount) }} 元
+                      </el-tag>
+                      <el-tag v-if="record.tablewareAmount > 0" size="small" effect="plain">
+                        餐具 {{ formatMoney(record.tablewareAmount) }} 元
+                      </el-tag>
                     </div>
                     <div class="muted">{{ formatDateTime(record.checkoutTime) }}</div>
                   </div>
@@ -105,8 +111,15 @@
                   <el-descriptions-item label="结账时间">{{ formatDateTime(record.checkoutTime) }}</el-descriptions-item>
                   <el-descriptions-item label="订单数">{{ record.orderCount || 0 }}</el-descriptions-item>
                   <el-descriptions-item label="菜品份数">{{ consumptionDishCount(record) }}</el-descriptions-item>
+                  <el-descriptions-item label="菜品金额">{{ formatMoney(record.dishAmount) }} 元</el-descriptions-item>
                   <el-descriptions-item label="应收金额">{{ formatMoney(record.totalAmount) }} 元</el-descriptions-item>
+                  <el-descriptions-item label="自助费">
+                    {{ formatHeadcountFee(record.selfServiceCount, record.selfServiceUnitPrice, record.selfServiceAmount) }}
+                  </el-descriptions-item>
                   <el-descriptions-item label="实收金额">{{ formatMoney(record.actualPaid) }} 元</el-descriptions-item>
+                  <el-descriptions-item label="餐具费">
+                    {{ formatHeadcountFee(record.tablewareCount, record.tablewareUnitPrice, record.tablewareAmount) }}
+                  </el-descriptions-item>
                   <el-descriptions-item label="优惠金额">{{ formatMoney(record.discountAmount) }} 元</el-descriptions-item>
                   <el-descriptions-item label="本次积分">{{ record.pointsEarned || 0 }}</el-descriptions-item>
                 </el-descriptions>
@@ -265,6 +278,16 @@ const handleSavePoints = async () => {
 }
 
 const formatMoney = (value) => formatPrice(Number(value) || 0)
+
+const formatHeadcountFee = (count, unitPrice, amount) => {
+  const normalizedAmount = Number(amount || 0)
+  const normalizedCount = Number(count || 0)
+  const normalizedUnitPrice = Number(unitPrice || 0)
+  if (normalizedAmount <= 0 && normalizedCount <= 0) {
+    return '-'
+  }
+  return `${formatMoney(normalizedAmount)} 元 / ${normalizedCount} 人 / ${formatMoney(normalizedUnitPrice)} 元`
+}
 
 const formatDateTime = (value) => {
   if (!value) {

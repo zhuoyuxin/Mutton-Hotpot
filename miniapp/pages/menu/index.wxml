@@ -6,10 +6,18 @@
     </view>
     <text class="hero-title">{{tableInfo.name || ('桌号 ' + tableId)}}</text>
     <text class="hero-subtitle">{{tableInfo.area || '堂食区域'}} · 现点现做 · 支持整份和半份</text>
-    <view class="hero-badges">
+  <view class="hero-badges">
       <text class="hero-badge">{{categories.length > 1 ? ((categories.length - 1) + ' 个分类') : '菜单已加载'}}</text>
       <text class="hero-badge">{{totalCount ? ('已选 ' + totalCount + ' 份') : '先挑几样招牌菜'}}</text>
     </view>
+  </view>
+
+  <view class="paper-card fee-notice">
+    <view class="fee-notice-title">
+      <text class="fee-notice-kicker">CHECKOUT NOTICE</text>
+      <text class="fee-notice-label">结账附加费</text>
+    </view>
+    <text class="fee-notice-desc">本店另收自助费（含蘸料和蔬菜畅吃）与餐具费，最终按实际人数由店员结账确认。</text>
   </view>
 
   <view class="paper-card search-panel">

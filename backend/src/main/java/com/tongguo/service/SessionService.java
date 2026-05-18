@@ -22,6 +22,7 @@ import com.tongguo.mapper.SessionCheckoutMapper;
 import com.tongguo.mapper.TableInfoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,12 @@ import java.util.stream.Collectors;
 
 @Service
 public class SessionService {
+
+    @Value("${checkout.default-self-service-unit-price-fen:0}")
+    private Integer defaultSelfServiceUnitPriceFen;
+
+    @Value("${checkout.default-tableware-unit-price-fen:0}")
+    private Integer defaultTablewareUnitPriceFen;
 
     @Autowired
     private DiningSessionMapper sessionMapper;
@@ -139,21 +146,30 @@ public class SessionService {
                 .filter(item -> item.getStatus() != null && (item.getStatus() == 1 || item.getStatus() == 2))
                 .collect(Collectors.toList());
 
-        int totalAmount = 0;
+        int dishAmount = 0;
         for (OrderItem item : payableItems) {
-            totalAmount += item.getDishPrice() * item.getQuantity();
+            dishAmount += item.getDishPrice() * item.getQuantity();
         }
 
         SessionDetailDTO dto = new SessionDetailDTO();
         dto.setSession(session);
         dto.setOrders(orders);
         dto.setDishSummary(buildDishSummary(payableItems));
-        dto.setTotalAmount(totalAmount);
+        dto.setDishAmount(dishAmount);
+        dto.setTotalAmount(dishAmount);
+        dto.setDefaultSelfServiceUnitPrice(safeNonNegative(defaultSelfServiceUnitPriceFen));
+        dto.setDefaultTablewareUnitPrice(safeNonNegative(defaultTablewareUnitPriceFen));
         return dto;
     }
 
     @Transactional
-    public SessionCheckout checkout(Integer sessionId, Integer actualPaidFen, String phone) {
+    public SessionCheckout checkout(Integer sessionId,
+                                    Integer actualPaidFen,
+                                    String phone,
+                                    Integer selfServiceCount,
+                                    Integer selfServiceUnitPriceFen,
+                                    Integer tablewareCount,
+                                    Integer tablewareUnitPriceFen) {
         SessionCheckout existing = checkoutMapper.selectOne(
                 new LambdaQueryWrapper<SessionCheckout>().eq(SessionCheckout::getSessionId, sessionId)
         );
@@ -188,10 +204,24 @@ public class SessionService {
                                 .in(OrderItem::getStatus, 1, 2)
                 );
 
-        int totalAmount = 0;
+        int dishAmount = 0;
         for (OrderItem item : allItems) {
-            totalAmount += item.getDishPrice() * item.getQuantity();
+            dishAmount += item.getDishPrice() * item.getQuantity();
         }
+
+        int normalizedSelfServiceCount = normalizeNonNegative(selfServiceCount, "Self-service count cannot be negative");
+        int normalizedTablewareCount = normalizeNonNegative(tablewareCount, "Tableware count cannot be negative");
+        int normalizedSelfServiceUnitPrice = normalizeNonNegative(
+                selfServiceUnitPriceFen != null ? selfServiceUnitPriceFen : defaultSelfServiceUnitPriceFen,
+                "Self-service unit price cannot be negative"
+        );
+        int normalizedTablewareUnitPrice = normalizeNonNegative(
+                tablewareUnitPriceFen != null ? tablewareUnitPriceFen : defaultTablewareUnitPriceFen,
+                "Tableware unit price cannot be negative"
+        );
+        int selfServiceAmount = normalizedSelfServiceCount * normalizedSelfServiceUnitPrice;
+        int tablewareAmount = normalizedTablewareCount * normalizedTablewareUnitPrice;
+        int totalAmount = dishAmount + selfServiceAmount + tablewareAmount;
 
         if (actualPaidFen == null) {
             throw new IllegalArgumentException("Actual paid amount is required");
@@ -209,8 +239,15 @@ public class SessionService {
         SessionCheckout checkout = new SessionCheckout();
         checkout.setSessionId(sessionId);
         checkout.setTotalAmount(totalAmount);
+        checkout.setDishAmount(dishAmount);
         checkout.setActualPaid(actualPaidFen);
         checkout.setDiscountAmount(discountAmount);
+        checkout.setSelfServiceCount(normalizedSelfServiceCount);
+        checkout.setSelfServiceUnitPrice(normalizedSelfServiceUnitPrice);
+        checkout.setSelfServiceAmount(selfServiceAmount);
+        checkout.setTablewareCount(normalizedTablewareCount);
+        checkout.setTablewareUnitPrice(normalizedTablewareUnitPrice);
+        checkout.setTablewareAmount(tablewareAmount);
         checkout.setPointsEarned(pointsEarned);
         checkout.setCheckoutTime(LocalDateTime.now());
 
@@ -336,8 +373,15 @@ public class SessionService {
             dto.setId(checkout.getId());
             dto.setSessionId(checkout.getSessionId());
             dto.setTotalAmount(checkout.getTotalAmount());
+            dto.setDishAmount(resolveDishAmount(checkout));
             dto.setActualPaid(checkout.getActualPaid());
             dto.setDiscountAmount(checkout.getDiscountAmount());
+            dto.setSelfServiceCount(valueOrZero(checkout.getSelfServiceCount()));
+            dto.setSelfServiceUnitPrice(valueOrZero(checkout.getSelfServiceUnitPrice()));
+            dto.setSelfServiceAmount(valueOrZero(checkout.getSelfServiceAmount()));
+            dto.setTablewareCount(valueOrZero(checkout.getTablewareCount()));
+            dto.setTablewareUnitPrice(valueOrZero(checkout.getTablewareUnitPrice()));
+            dto.setTablewareAmount(valueOrZero(checkout.getTablewareAmount()));
             dto.setPointsEarned(checkout.getPointsEarned());
             dto.setCheckoutTime(checkout.getCheckoutTime());
 
@@ -420,8 +464,15 @@ public class SessionService {
             dto.setCheckoutId(checkout.getId());
             dto.setSessionId(checkout.getSessionId());
             dto.setTotalAmount(checkout.getTotalAmount());
+            dto.setDishAmount(resolveDishAmount(checkout));
             dto.setActualPaid(checkout.getActualPaid());
             dto.setDiscountAmount(checkout.getDiscountAmount());
+            dto.setSelfServiceCount(valueOrZero(checkout.getSelfServiceCount()));
+            dto.setSelfServiceUnitPrice(valueOrZero(checkout.getSelfServiceUnitPrice()));
+            dto.setSelfServiceAmount(valueOrZero(checkout.getSelfServiceAmount()));
+            dto.setTablewareCount(valueOrZero(checkout.getTablewareCount()));
+            dto.setTablewareUnitPrice(valueOrZero(checkout.getTablewareUnitPrice()));
+            dto.setTablewareAmount(valueOrZero(checkout.getTablewareAmount()));
             dto.setPointsEarned(checkout.getPointsEarned());
             dto.setCheckoutTime(checkout.getCheckoutTime());
 
@@ -477,5 +528,34 @@ public class SessionService {
             summary.setAmount(summary.getAmount() + item.getDishPrice() * item.getQuantity());
         }
         return new ArrayList<>(summaryByDish.values());
+    }
+
+    private int safeNonNegative(Integer value) {
+        return Math.max(0, value == null ? 0 : value);
+    }
+
+    private int normalizeNonNegative(Integer value, String errorMessage) {
+        if (value == null) {
+            return 0;
+        }
+        if (value < 0) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        return value;
+    }
+
+    private int valueOrZero(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private int resolveDishAmount(SessionCheckout checkout) {
+        if (checkout == null) {
+            return 0;
+        }
+        Integer dishAmount = checkout.getDishAmount();
+        if (dishAmount != null) {
+            return dishAmount;
+        }
+        return valueOrZero(checkout.getTotalAmount());
     }
 }

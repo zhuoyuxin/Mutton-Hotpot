@@ -51,20 +51,37 @@ public class SessionController {
         }
 
         try {
-            Integer actualPaidFen = parseActualPaidFen(request.getActualPaid());
-            return Result.ok(sessionService.checkout(id, actualPaidFen, request.getPhone()));
+            Integer actualPaidFen = parseAmountFen(request.getActualPaid(), "Actual paid amount is required");
+            Integer selfServiceUnitPriceFen = parseOptionalAmountFen(request.getSelfServiceUnitPrice());
+            Integer tablewareUnitPriceFen = parseOptionalAmountFen(request.getTablewareUnitPrice());
+            return Result.ok(sessionService.checkout(
+                    id,
+                    actualPaidFen,
+                    request.getPhone(),
+                    request.getSelfServiceCount(),
+                    selfServiceUnitPriceFen,
+                    request.getTablewareCount(),
+                    tablewareUnitPriceFen
+            ));
         } catch (NumberFormatException | ArithmeticException e) {
-            return Result.error("Actual paid amount format is invalid");
+            return Result.error("Amount format is invalid");
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
         }
     }
 
-    private Integer parseActualPaidFen(BigDecimal actualPaid) {
-        if (actualPaid == null) {
-            throw new IllegalArgumentException("Actual paid amount is required");
+    private Integer parseAmountFen(BigDecimal amountValue, String missingMessage) {
+        if (amountValue == null) {
+            throw new IllegalArgumentException(missingMessage);
         }
-        BigDecimal amount = actualPaid.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal amount = amountValue.setScale(2, RoundingMode.HALF_UP);
         return amount.multiply(new BigDecimal(100)).intValueExact();
+    }
+
+    private Integer parseOptionalAmountFen(BigDecimal amountValue) {
+        if (amountValue == null) {
+            return null;
+        }
+        return parseAmountFen(amountValue, "Amount is required");
     }
 }

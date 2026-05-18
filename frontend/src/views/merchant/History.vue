@@ -3,7 +3,10 @@
     <el-card>
       <template #header>
         <div class="toolbar">
-          <span>结账历史</span>
+          <div>
+            <div class="page-title">结账历史</div>
+            <div class="page-subtitle">按日期查看每次结账的菜品、自助费、餐具费和实收明细。</div>
+          </div>
           <div class="filters">
             <el-date-picker
               v-model="dateRange"
@@ -24,20 +27,29 @@
           <el-table-column label="结账时间" width="180">
             <template #default="{ row }">{{ formatDateTime(row.checkoutTime) }}</template>
           </el-table-column>
-          <el-table-column label="桌台" width="100">
-            <template #default="{ row }">{{ row.tableName || '散客' }}</template>
+          <el-table-column label="桌台" min-width="130">
+            <template #default="{ row }">{{ formatTableLabel(row) }}</template>
           </el-table-column>
-          <el-table-column label="总额(元)" width="100">
+          <el-table-column label="菜品金额(元)" width="120">
+            <template #default="{ row }">{{ formatPrice(row.dishAmount) }}</template>
+          </el-table-column>
+          <el-table-column label="自助费" min-width="150">
+            <template #default="{ row }">{{ formatHeadcountFee(row.selfServiceCount, row.selfServiceUnitPrice, row.selfServiceAmount) }}</template>
+          </el-table-column>
+          <el-table-column label="餐具费" min-width="150">
+            <template #default="{ row }">{{ formatHeadcountFee(row.tablewareCount, row.tablewareUnitPrice, row.tablewareAmount) }}</template>
+          </el-table-column>
+          <el-table-column label="应收(元)" width="110">
             <template #default="{ row }">{{ formatPrice(row.totalAmount) }}</template>
           </el-table-column>
-          <el-table-column label="实收(元)" width="100">
+          <el-table-column label="实收(元)" width="110">
             <template #default="{ row }">{{ formatPrice(row.actualPaid) }}</template>
           </el-table-column>
-          <el-table-column label="折扣(元)" width="100">
+          <el-table-column label="优惠(元)" width="110">
             <template #default="{ row }">{{ formatPrice(row.discountAmount) }}</template>
           </el-table-column>
-          <el-table-column label="积分" width="80">
-            <template #default="{ row }">{{ row.pointsEarned }}</template>
+          <el-table-column label="积分" width="90">
+            <template #default="{ row }">{{ row.pointsEarned || 0 }}</template>
           </el-table-column>
         </el-table>
       </div>
@@ -64,6 +76,21 @@ const formatDateTime = (value) => {
   return String(value).replace('T', ' ').split('.')[0]
 }
 
+const formatTableLabel = (row) => {
+  const tableName = row.tableName || '散台'
+  return row.tableArea ? `${row.tableArea} / ${tableName}` : tableName
+}
+
+const formatHeadcountFee = (count, unitPrice, amount) => {
+  const normalizedAmount = Number(amount || 0)
+  const normalizedCount = Number(count || 0)
+  const normalizedUnitPrice = Number(unitPrice || 0)
+  if (normalizedAmount <= 0 && normalizedCount <= 0) {
+    return '-'
+  }
+  return `${formatPrice(normalizedAmount)} 元 / ${normalizedCount} 人 / ${formatPrice(normalizedUnitPrice)} 元`
+}
+
 const loadHistory = async () => {
   loading.value = true
   try {
@@ -74,7 +101,7 @@ const loadHistory = async () => {
     }
     const res = await history(params)
     records.value = res.data || []
-  } catch (e) {
+  } catch (error) {
     ElMessage.error('加载结账历史失败')
   } finally {
     loading.value = false
@@ -89,8 +116,20 @@ onMounted(loadHistory)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2f241f;
+}
+
+.page-subtitle {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8a7468;
 }
 
 .filters {

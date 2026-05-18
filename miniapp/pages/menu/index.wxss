@@ -4,6 +4,39 @@
   padding-bottom: 344rpx;
 }
 
+.fee-notice {
+  margin-bottom: 18rpx;
+  padding: 22rpx 24rpx;
+  background: linear-gradient(135deg, rgba(255, 244, 228, 0.94), rgba(250, 230, 204, 0.92));
+}
+
+.fee-notice-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.fee-notice-kicker {
+  font-size: 20rpx;
+  letter-spacing: 3rpx;
+  color: #a5734b;
+}
+
+.fee-notice-label {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #8a4329;
+}
+
+.fee-notice-desc {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #76584a;
+}
+
 .search-panel {
   padding: 22rpx;
   margin-bottom: 18rpx;
