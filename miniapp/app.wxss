@@ -1,8 +1,9 @@
 page {
   min-height: 100%;
-  background-color: #f6efe5;
-  color: #241513;
+  background-color: #f5ede2;
+  color: #1f120e;
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow-x: hidden;
 }
 
 button {
@@ -15,4 +16,40 @@ button {
 
 button::after {
   border: 0;
+}
+
+/* 页面加载动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.delay-1 {
+  animation-delay: 0.05s;
+  opacity: 0;
+}
+
+.delay-2 {
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+.delay-3 {
+  animation-delay: 0.15s;
+  opacity: 0;
+}
+
+.delay-4 {
+  animation-delay: 0.2s;
+  opacity: 0;
 }

@@ -11,13 +11,15 @@
 
 .stats-grid {
   display: flex;
+  gap: 16rpx;
   margin-bottom: 18rpx;
 }
 
 .stats-card {
   flex: 1;
   padding: 24rpx 20rpx;
-  margin-right: 16rpx;
+  margin-right: 0;
+  text-align: center;
 }
 
 .stats-card:last-child {
@@ -27,15 +29,15 @@
 .stats-label {
   display: block;
   font-size: 22rpx;
-  color: #8b6d5d;
+  color: #9c7e6e;
 }
 
 .stats-value {
   display: block;
   margin-top: 12rpx;
   font-size: 34rpx;
-  font-weight: 700;
-  color: #281815;
+  font-weight: 800;
+  color: #1f120e;
 }
 
 .profile-note {
@@ -43,7 +45,8 @@
   padding: 24rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: #7f6154;
+  color: #9c7e6e;
+  background: rgba(140, 95, 62, 0.03);
 }
 
 .bind-card {
@@ -60,7 +63,7 @@
   margin-bottom: 20rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: #7f6154;
+  color: #9c7e6e;
 }
 
 .bind-button {
@@ -85,6 +88,7 @@
 
 .tab-row {
   display: flex;
+  gap: 14rpx;
   margin-bottom: 16rpx;
 }
 
@@ -94,12 +98,15 @@
   justify-content: center;
   min-height: 68rpx;
   padding: 0 26rpx;
-  margin-right: 14rpx;
   border-radius: 999rpx;
-  background-color: rgba(140, 95, 62, 0.08);
-  color: #7f5944;
+  background-color: rgba(140, 95, 62, 0.06);
+  color: #6b4f42;
   font-size: 24rpx;
   font-weight: 600;
+}
+
+.tab-pill::after {
+  border: 0;
 }
 
 .tab-pill:last-child {
@@ -109,17 +116,18 @@
 .tab-pill.active {
   background: linear-gradient(135deg, #a84329, #d98a4a);
   color: #fff5ea;
+  box-shadow: 0 4rpx 12rpx rgba(181, 72, 42, 0.15);
 }
 
 .inner-empty {
   padding: 46rpx 0;
   text-align: center;
-  color: #8a6d5f;
+  color: #9c7e6e;
   font-size: 24rpx;
 }
 
 .record-item + .record-item {
-  border-top: 1rpx solid rgba(164, 119, 87, 0.12);
+  border-top: 1rpx solid rgba(164, 119, 87, 0.06);
 }
 
 .record-item {
@@ -139,15 +147,16 @@
 .record-title {
   display: block;
   font-size: 28rpx;
-  color: #2e1c19;
+  color: #1f120e;
   word-break: break-all;
+  font-weight: 500;
 }
 
 .record-time {
   display: block;
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #8b6d5d;
+  color: #9c7e6e;
 }
 
 .record-side {
@@ -159,13 +168,13 @@
 
 .record-price {
   font-size: 26rpx;
-  font-weight: 700;
-  color: #ab4528;
+  font-weight: 800;
+  color: #b5482a;
 }
 
 .record-points {
   font-size: 26rpx;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .record-points.plus {
@@ -173,7 +182,7 @@
 }
 
 .record-points.minus {
-  color: #9f4037;
+  color: #b0352a;
 }
 
 .record-tag {
@@ -189,26 +198,26 @@
 }
 
 .record-tag.processing {
-  background-color: rgba(235, 165, 90, 0.18);
-  color: #9d581e;
+  background-color: rgba(199, 122, 30, 0.1);
+  color: #c77a1e;
 }
 
 .record-tag.warning {
-  background-color: rgba(233, 144, 56, 0.16);
-  color: #9d541a;
+  background-color: rgba(233, 144, 56, 0.1);
+  color: #c77a1e;
 }
 
 .record-tag.success {
-  background-color: rgba(91, 170, 116, 0.16);
+  background-color: rgba(47, 122, 71, 0.1);
   color: #2f7a47;
 }
 
 .record-tag.muted {
-  background-color: rgba(126, 101, 92, 0.12);
-  color: #7a6358;
+  background-color: rgba(126, 101, 92, 0.1);
+  color: #9c7e6e;
 }
 
 .record-tag.neutral {
   background-color: rgba(140, 95, 62, 0.1);
-  color: #7f5944;
+  color: #6b4f42;
 }

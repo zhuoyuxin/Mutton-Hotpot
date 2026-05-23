@@ -21,10 +21,10 @@
       <text class="section-meta">{{scanLoading ? '正在调用相机' : (tableReady ? '桌台已识别' : '首页仅支持扫码选桌')}}</text>
     </view>
 
-    <button class="scan-button" loading="{{scanLoading}}" bindtap="handleScanTable">
+    <view class="scan-button" catchtap="handleScanTable">
       <text class="scan-button-title">扫桌码</text>
       <text class="scan-button-sub">打开摄像头，识别桌台二维码</text>
-    </button>
+    </view>
 
     <view class="table-panel">
       <text class="table-panel-label">当前桌台</text>
@@ -38,14 +38,27 @@
       </view>
     </view>
 
+  </view>
+
+  <view class="paper-card identity-card">
     <view class="identity-panel">
-      <text class="identity-label">当前微信身份</text>
-      <text class="identity-main">{{loginReady ? customerLabel : '正在完成静默登录'}}</text>
-      <text class="identity-note">当前版本已切换为微信身份登录，不再依赖手机号才能进入点餐。</text>
+      <view class="identity-line">
+        <text class="identity-label">当前微信身份</text>
+        <text class="identity-main">{{loginReady ? customerLabel : '正在完成静默登录'}}</text>
+      </view>
+      <text class="identity-note">当前版本已切换为微信身份登录，不再依赖手机号即可点餐。</text>
       <text wx:if="{{loginError}}" class="identity-error">{{loginError}}</text>
       <button wx:if="{{loginError}}" class="secondary-button identity-button" bindtap="retryLogin">重新获取微信身份</button>
     </view>
+  </view>
 
+  <view class="paper-card feature-card">
+    <view class="section-head feature-head">
+      <view>
+        <text class="section-eyebrow">FEATURES</text>
+        <text class="section-title">使用说明</text>
+      </view>
+    </view>
     <view class="capability-list">
       <view class="capability-item">
         <text class="capability-index">01</text>
@@ -69,10 +82,6 @@
         </view>
       </view>
     </view>
-
-    <button class="primary-button entry-submit" loading="{{submitting}}" disabled="{{!loginReady || !tableReady}}" bindtap="handleSubmit">
-      进入点餐
-    </button>
   </view>
 
   <view class="bottom-nav">
